@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<meta name="robots" content="noindex, nofollow">
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REMO+ | پنل مدیریت</title>
+
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-page">
+
+    <!-- نوار بالا مشترک -->
+    <header class="navbar">
+        <div class="navbar-logo">
+            <span>REmo+</span>
+            <span style="font-size:12px;color:#ff6b6b;">پنل مدیریت</span>
+        </div>
+
+        <nav class="navbar-links">
+            <a href="index.html" class="navbar-link">خانه</a>
+            <a href="admin.html" class="navbar-link">مدیریت</a>
+        </nav>
+    </header>
+
+    <!-- لایه دو ستونه ادمین -->
+    <main class="admin-layout">
+
+        <!-- ستون کناری (فرم) -->
+        <aside class="admin-sidebar">
+            <h2 id="form-title" class="admin-sidebar-title">افزودن محتوای جدید</h2>
+
+            <form id="movie-form" class="admin-form">
+
+                <div class="admin-field">
+                    <label class="admin-label">عنوان فیلم / سریال:</label>
+                    <input type="text" id="title" class="admin-input" required placeholder="مثال: Interstellar">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">سال ساخت:</label>
+                    <input type="text" id="year" class="admin-input" required placeholder="مثال: 2014">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">دسته‌بندی (ژانر):</label>
+                    <input type="text" id="category" class="admin-input" placeholder="مثال: Sci-Fi, Drama">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">آدرس کاور (URL):</label>
+                    <input type="text" id="cover" class="admin-input" required
+                        placeholder="assets/covers/name.jpg یا لینک وب">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">لینک استریم (m3u8 یا mp4):</label>
+                    <input type="text" id="stream" class="admin-input" required placeholder="لینک ویدیو یا فایل HLS">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">لینک دانلود مستقیم (اختیاری):</label>
+                    <input type="text" id="download" class="admin-input" placeholder="لینک دانلود مستقیم mp4">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">آدرس زیرنویس (VTT - اختیاری):</label>
+                    <input type="text" id="subtitle" class="admin-input" placeholder="assets/subtitles/name.vtt">
+                </div>
+                <div class="form-group">
+                    <label for="sub-file">آپلود فایل زیرنویس (SRT یا VTT):</label>
+                    <input type="file" id="sub-file" accept=".srt,.vtt">
+                </div>
+
+                <div class="admin-field">
+                    <label class="admin-label">توضیحات کوتاه:</label>
+                    <textarea id="description" class="admin-textarea" rows="3"
+                        placeholder="توضیحاتی در مورد داستان..."></textarea>
+                </div>
+
+                <!-- نوع محتوا -->
+                <div class="admin-field">
+                    <label class="admin-label">نوع محتوا:</label>
+                    <select id="type" class="admin-select">
+                        <option value="movie">فیلم سینمایی</option>
+                        <option value="series">سریال</option>
+                    </select>
+                </div>
+
+                <!-- مدیریت فصل‌ها و قسمت‌ها برای سریال -->
+                <div id="series-section" class="glass-card" style="display:none; margin-top:10px;">
+                    <h3 class="h3" style="margin-bottom:10px;">مدیریت فصل‌ها و قسمت‌ها</h3>
+                    <div id="seasons-container"></div>
+                    <button type="button" id="add-season-btn" class="btn-secondary" style="margin-top:10px;">
+                        + افزودن فصل جدید
+                    </button>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-primary" style="margin-top:12px;">
+                    ثبت و افزودن
+                </button>
+
+            </form>
+        </aside>
+
+        <!-- ستون اصلی (لیست محتوا) -->
+        <section class="admin-main">
+            <h2 class="admin-section-title">لیست محتوای موجود</h2>
+
+            <div id="movie-list-container" class="admin-table-wrapper">
+                <!-- کارت‌ها/جدول توسط admin.js اینجا رندر می‌شوند -->
+            </div>
+        </section>
+
+    </main>
+
+    <script src="js/admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script> <!-- فایل تنظیمات که قبلاً ساختیم -->
+    <script type="module" src="js/admin.js"></script>
+
+</body>
+
+</html>

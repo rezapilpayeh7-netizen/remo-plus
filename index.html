@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<meta name="robots" content="noindex, nofollow">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>REMO+</title>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/index.css" />
+</head>
+
+<body class="page">
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="navbar-logo">
+            <span>REmo+</span>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="جستجوی فیلم یا سریال..." />
+        </div>
+
+        <nav class="navbar-links">
+            <a href="index.html" class="navbar-link">خانه</a>
+            <a href="admin.html" class="navbar-link">مدیریت</a>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="container index-main">
+        <!-- Continue Watching Section -->
+        <section id="continue-watching-section" class="section continue-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">ادامه تماشا</h2>
+            </div>
+
+            <!-- کارت‌های ادامه تماشا توسط app.js ساخته می‌شوند -->
+            <div class="row continue-row" id="continue-grid"></div>
+        </section>
+
+        <!-- Category Filters Section -->
+        <section class="section">
+            <div id="category-filters" class="category-section">
+                <!-- دکمه‌های دسته‌بندی به‌صورت داینامیک توسط app.js اضافه می‌شوند -->
+            </div>
+        </section>
+
+        <!-- Movie/Series Grid Section -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">فیلم‌ها و سریال‌ها</h2>
+            </div>
+
+            <div id="movie-grid" class="grid grid-4 movie-grid">
+                <!-- کارت‌های فیلم/سریال توسط app.js رندر می‌شوند -->
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,104 @@
+/* base.css */
+
+/* فونت (اگر در <head> لینک گوگل‌فونت دادی، اینجا فقط استفاده‌اش می‌کنیم) */
+:root {
+    /* رنگ‌ها – دیزنی/نتفلیکس طور */
+    --bg-main: #050816;
+    --bg-soft: #0b1020;
+    --bg-elevated: #141a2f;
+
+    --text-main: #ffffff;
+    --text-soft: #b3bedf;
+    --text-muted: #7f8bad;
+
+    --primary: #00a8ff;
+    --primary-soft: #0091dd;
+    --accent: #ffb300;
+
+    --border-soft: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.14);
+
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 8px;
+
+    --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.50);
+    --shadow-strong: 0 18px 45px rgba(0, 0, 0, 0.70);
+
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+}
+
+/* Reset ساده */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    background: radial-gradient(circle at top, #101735 0, #050816 55%);
+    color: var(--text-main);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    line-height: 1.6;
+}
+
+/* لینک‌ها */
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* اسکرول‌بار سینمایی */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #050816;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #28324b;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3a4766;
+}
+
+/* کلاس‌های تایپوگرافی پایه */
+.h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+}
+
+.h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.text-soft {
+    color: var(--text-soft);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}

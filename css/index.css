@@ -1,0 +1,270 @@
+/* صفحه اصلی index */
+.index-main {
+    padding-top: 90px;
+    /* فاصله از navbar */
+}
+
+/* Hero / عنوان اصلی (در صورت نیاز) */
+.index-hero {
+    margin-bottom: 28px;
+}
+
+.index-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.index-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-soft);
+}
+
+/* حالت پنهان عمومی */
+.hidden {
+    display: none;
+}
+
+/* ================================
+   Continue Watching
+================================ */
+.continue-section {
+    margin-bottom: 24px;
+}
+
+.continue-row {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.continue-card {
+    min-width: 220px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg,
+            rgba(25, 35, 68, 0.96),
+            rgba(8, 13, 27, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    transition:
+        transform var(--transition-normal),
+        box-shadow var(--transition-normal);
+}
+
+.continue-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-soft);
+}
+
+.continue-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.continue-info-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.continue-info-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+/* ================================
+   بخش دسته‌بندی‌ها
+================================ */
+/* کانتینر اصلی فیلترها */
+.category-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 25px 0;
+    padding: 10px 5px;
+    overflow-x: auto;
+    /* برای اسکرول افقی در موبایل */
+    scrollbar-width: none;
+    /* مخفی کردن اسکرول در فایرفاکس */
+}
+
+.category-section::-webkit-scrollbar {
+    display: none;
+    /* مخفی کردن اسکرول در کروم و ساdouble */
+}
+
+/* استایل دکمه‌های دسته‌بندی */
+.category-btn {
+    white-space: nowrap;
+    /* جلوگیری از شکستن متن دکمه */
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-soft);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* حالت Hover */
+.category-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* حالت فعال (دکمه انتخاب شده) */
+.category-btn.active {
+    background: var(--primary);
+    /* قرمز نتفلیکسی */
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+}
+
+/* انیمیشن کوچک برای کلیک */
+.category-btn:active {
+    transform: scale(0.95);
+}
+/* ================================
+   Grid فیلم‌ها و سریال‌ها
+================================ */
+.movie-grid {
+    margin-top: 12px;
+}
+
+/* برای اطمینان، grid-4 را تنظیم می‌کنیم
+   (اگر در layout.css تعریف شده، این به صورت مکمل است) */
+.grid.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 18px;
+}
+
+/* کارت فیلم (ساخته‌شده در app.js)
+   فرض می‌کنیم در components.css چیزی مثل .movie-card داریم؛
+   اینجا فقط alignment و فاصله‌ها را اصلاح می‌کنیم */
+.movie-card {
+    position: relative;
+    background: rgba(7, 11, 23, 0.95);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition:
+        transform var(--transition-normal),
+        box-shadow var(--transition-normal);
+}
+
+.movie-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-soft);
+}
+
+.movie-cover {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    display: block;
+}
+
+/* متن زیر کاور */
+.movie-body {
+    padding: 8px 10px 10px;
+    text-align: center;
+}
+
+.movie-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.movie-meta {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+}
+
+/* آیکن‌های پایین کارت (Play / Favorite) */
+.movie-actions {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.movie-action-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 5, 0.6);
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+/* ================================
+   Search Box alignment (navbar)
+================================ */
+/* سرچ‌باکس در هدر */
+.search-box {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+#search-input {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 8px 20px;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+#search-input:focus {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: var(--primary);
+    /* قرمز نتفلیکسی */
+    box-shadow: 0 0 10px rgba(229, 9, 20, 0.3);
+    max-width: 450px;
+}
+
+#search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* ================================
+   Responsive
+================================ */
+@media (max-width: 768px) {
+    .continue-card {
+        min-width: 190px;
+    }
+
+    .grid.grid-4 {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+    }
+}

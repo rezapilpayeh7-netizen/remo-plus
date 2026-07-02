@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<meta name="robots" content="noindex, nofollow">
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REmo+ | جزئیات محتوا</title>
+
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/details.css">
+</head>
+
+<body class="page">
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="navbar-logo">
+            <span>REmo+</span>
+        </div>
+
+        <nav class="navbar-links">
+            <a href="index.html" class="navbar-link">خانه</a>
+        </nav>
+    </header>
+
+    <!-- MAIN -->
+    <main class="container">
+
+        <!-- HERO -->
+        <section class="details-hero">
+
+            <img id="detailsCover" src="" alt="کاور" class="details-hero-bg">
+
+            <div class="details-hero-overlay"></div>
+
+            <div class="details-hero-content">
+                <h1 id="detailsTitle" class="details-title"></h1>
+
+                <div id="detailsMeta" class="details-meta">
+                    <!-- سال، نوع، مدت، ... -->
+                </div>
+
+                <p id="detailsDescription" class="details-description" style="margin-bottom:14px;"></p>
+
+                <div class="details-actions">
+                    <a id="watchBtn" href="#" class="btn-primary">▶ پخش</a>
+                    <a id="downloadBtn" href="#" class="btn-secondary" target="_blank">دانلود</a>
+                    <button id="favoriteBtn" class="btn-secondary">★ علاقه‌مندی</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- BODY -->
+        <section class="details-body">
+
+            <!-- ستون چپ: توضیحات و اپیزودها -->
+            <div>
+
+                <!-- باکس توضیحات اضافی (اگر خواستی) -->
+                <div class="glass-card" style="margin-bottom:18px;">
+                    <h2 class="h3" style="margin-bottom:8px;">توضیحات</h2>
+                    <p id="detailsLong" class="details-description">
+                        <!-- اگر توضیح بلند جدا داشته باشی؛ وگرنه می‌تونی همین را خالی بگذاری یا از description دوباره استفاده کنی -->
+                    </p>
+                </div>
+
+                <!-- بخش فصل‌ها و قسمت‌ها (فقط برای سریال) -->
+                <div id="seasonsWrapper" class="seasons-wrapper" style="display:none;">
+
+                    <div class="section-header" style="margin-bottom:10px;">
+                        <h2 class="section-title">فصل‌ها و قسمت‌ها</h2>
+                    </div>
+
+                    <div id="seasonTabs" class="season-tabs">
+                        <!-- تب‌های فصل‌ها -->
+                    </div>
+
+                    <div id="episodesList" class="episodes-list">
+                        <!-- کارت‌های اپیزود -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ستون راست: اطلاعات جانبی -->
+            <aside class="details-side">
+                <div class="glass-card">
+                    <h3 class="h3" style="margin-bottom:8px;">اطلاعات</h3>
+                    <div id="detailsInfo">
+                        <!-- سال، ژانر، نوع، مدت، ریتینگ، ... توسط details.js -->
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+    </main>
+
+    <script src="js/details.js"></script>
+</body>
+
+</html>

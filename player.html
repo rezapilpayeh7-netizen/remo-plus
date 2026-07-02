@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<meta name="robots" content="noindex, nofollow">
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REMO+ Player</title>
+
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/player.css">
+
+    <!-- hls.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+
+<body class="player-page">
+
+    <main class="player-wrapper">
+
+        <!-- دکمه برگشت (به صفحه اصلی) -->
+        <a href="index.html" class="player-back-btn">✕</a>
+
+        <!-- کانتینر اصلی پلیر -->
+        <div class="player-container" id="player-wrapper">
+            <video id="video-player" class="player-video" playsinline></video>
+
+            <!-- کنترل‌های اختصاصی سفارشی -->
+            <div class="player-controls-overlay" id="player-controls">
+                <!-- نوار پیشرفت -->
+                <div class="player-progress-container">
+                    <div class="player-progress-bar" id="progress-bar">
+                        <div class="player-progress-filled" id="progress-filled"></div>
+                    </div>
+                </div>
+
+                <!-- ردیف دکمه‌ها -->
+                <div class="player-buttons-row">
+                    <div class="player-right-side">
+                        <button class="player-btn play-btn" id="play-pause">▶</button>
+                        <span class="player-time" id="time-display">00:00 / 00:00</span>
+                    </div>
+
+                    <div class="player-left-side">
+                        <!-- دکمه زیرنویس (فعلاً ساده – بعداً می‌تونیم منو زبان اضافه کنیم) -->
+                        <button class="player-btn sub-btn" id="sub-btn">CC</button>
+                        <!-- تمام‌صفحه -->
+                        <button class="player-btn fs-btn" id="fs-btn">⛶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- نوار اطلاعات (تیتر + توضیح + دانلود) – مثل قبل ولی زیر ویدیو -->
+        <div class="player-info-bar">
+            <div>
+                <h1 id="movie-title" class="player-title"></h1>
+                <p id="movie-description" class="player-meta"></p>
+            </div>
+
+            <div class="player-actions">
+                <a id="download-btn" class="player-download-btn" target="_blank">
+                    دانلود
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/player.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,294 @@
+/* ================================
+   صفحه و لایه‌بندی
+================================ */
+.admin-page {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #101735 0, #050816 55%);
+    color: var(--text-main);
+}
+
+.admin-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* ================================
+   سایدبار
+================================ */
+.admin-sidebar {
+    background: #050816;
+    border-right: 1px solid var(--border-soft);
+    padding: 18px 16px;
+    overflow-y: auto;
+}
+
+.admin-sidebar-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* ================================
+   فرم‌ها
+================================ */
+.admin-form {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-label {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(5, 8, 22, 0.9);
+    padding: 8px 10px;
+    color: var(--text-main);
+    font-size: 0.88rem;
+}
+
+.admin-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ================================
+   بخش سریال — فصل‌ها + قسمت‌ها
+================================ */
+#series-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* فصل */
+.season-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.season-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.season-title {
+    flex: 1;
+    margin-left: 12px;
+}
+
+/* قسمت */
+.episodes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.episode-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.episode-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.episode-box input {
+    width: 100%;
+}
+
+.remove-btn {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff6b6b;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    margin-top: 6px;
+}
+
+.remove-btn:hover {
+    background: rgba(255, 0, 0, 0.3);
+}
+
+/* ================================
+   دکمه‌ها
+================================ */
+.btn-primary,
+.btn-secondary {
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* ================================
+   بخش لیست محتوا
+================================ */
+.admin-main {
+    padding: 88px 22px 22px;
+    overflow-y: auto;
+}
+
+.admin-section-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+/* کارت محتوا */
+.admin-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+}
+
+.admin-card img {
+    width: 80px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.admin-card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-meta {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+}
+
+.admin-type {
+    font-size: 0.78rem;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 6px;
+    border-radius: var(--radius-sm);
+    width: fit-content;
+}
+
+.admin-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+    border: none;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.edit-btn {
+    background: rgba(0, 150, 255, 0.2);
+    color: #4dbbff;
+}
+
+.edit-btn:hover {
+    background: rgba(0, 150, 255, 0.3);
+}
+
+.delete-btn {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff6b6b;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 0, 0, 0.3);
+}
+
+/* ================================
+   Mobile
+================================ */
+@media (max-width: 900px) {
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sidebar {
+        position: fixed;
+        inset: 70px 0 auto 0;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow-x: auto;
+        z-index: 10;
+    }
+
+    .admin-main {
+        padding: 140px 14px 18px;
+    }
+
+    .admin-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .admin-card img {
+        width: 120px;
+        height: 160px;
+    }
+
+    .admin-card-actions {
+        flex-direction: row;
+        gap: 12px;
+    }
+}

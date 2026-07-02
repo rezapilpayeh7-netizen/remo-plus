@@ -1,0 +1,133 @@
+/* layout.css */
+
+/* کانتینر اصلی صفحات */
+.page {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #101735 0, #050816 55%);
+}
+
+/* محدودکننده عرض محتوا */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 90px 18px 40px;
+    /* 90px برای زیر navbar ثابت */
+}
+
+/* Navbar مشترک */
+.navbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 70px;
+    padding: 0 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    background: linear-gradient(to bottom,
+            rgba(5, 8, 22, 0.9),
+            rgba(5, 8, 22, 0.65),
+            transparent);
+    backdrop-filter: blur(22px);
+    border-bottom: 1px solid var(--border-soft);
+
+    z-index: 1000;
+}
+
+/* لوگو */
+.navbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* آیتم‌های ناوبار */
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.navbar-link {
+    font-size: 0.95rem;
+    color: var(--text-soft);
+    padding: 6px 10px;
+    border-radius: 999px;
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.navbar-link:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* گرید عمومی فیلم‌ها */
+.grid {
+    display: grid;
+    gap: 18px;
+}
+
+/* گرید مخصوص لیست محتوای صفحه اصلی */
+.grid-4 {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+/* سطرهای افقی (مثلاً continue watching) */
+.row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+/* برای جلوگیری از اسکرول‌بار زشت در ردیف‌ها */
+.row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.row::-webkit-scrollbar-thumb {
+    background: #28324b;
+    border-radius: 999px;
+}
+
+/* فاصله‌های سکشن‌ها */
+.section {
+    margin-bottom: 32px;
+}
+
+.section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.section-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* ریسپانسیو ساده */
+@media (max-width: 768px) {
+    .container {
+        padding: 80px 12px 24px;
+    }
+
+    .navbar {
+        padding: 0 16px;
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+}

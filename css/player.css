@@ -1,0 +1,366 @@
+/* player.css */
+
+.player-page {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #101735 0, #050816 55%);
+}
+
+/* بدنه اصلی صفحه پلیر – حالت معمولی */
+.player-wrapper {
+    position: relative;
+    max-width: 1100px;
+    margin: 90px auto 30px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: var(--shadow-strong);
+}
+
+/* حالت fullscreen سفارشی */
+.player-wrapper.player-fullscreen {
+    position: fixed;
+    inset: 0;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    z-index: 9999;
+    background: #000;
+}
+
+/* ویدیو در fullscreen کل ارتفاع را پر کند */
+.player-wrapper.player-fullscreen .player-video {
+    width: 100%;
+    height: 100vh;
+    object-fit: contain;
+}
+
+/* نوار اطلاعات در fullscreen روی ویدیو به صورت overlay بیاید */
+.player-wrapper.player-fullscreen .player-info-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+}
+
+/* کانتینر ویدیو */
+.player-container {
+    position: relative;
+    width: 100%;
+    background: #000;
+    overflow: hidden;
+}
+
+/* خود ویدیو */
+.player-video {
+    display: block;
+    width: 100%;
+    background: #000;
+}
+
+/* دکمه برگشت */
+.player-back-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 30;
+
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+
+    transition: background var(--transition-fast),
+        transform var(--transition-fast),
+        border-color var(--transition-fast);
+}
+
+.player-back-btn:hover {
+    background: rgba(0, 0, 0, 0.65);
+    border-color: rgba(255, 255, 255, 0.24);
+    transform: scale(1.04);
+}
+
+/* لایه کنترل‌های سفارشی */
+.player-controls-overlay {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+
+    padding: 18px 16px 14px;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.82) 0%,
+            rgba(0, 0, 0, 0.48) 45%,
+            rgba(0, 0, 0, 0) 100%);
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* نوار پیشرفت */
+.player-progress-container {
+    width: 100%;
+}
+
+/* مهم: از چپ پر شود، جهت LTR */
+.player-progress-bar {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.18);
+    direction: ltr;
+}
+
+.player-progress-filled {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #e50914, #ff3b30);
+    transition: width 0.1s linear;
+    /* از چپ شروع کند */
+    float: left;
+}
+
+/* ردیف دکمه‌ها */
+.player-buttons-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.player-right-side,
+.player-left-side {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* دکمه‌های پلیر */
+.player-btn {
+    min-width: 42px;
+    height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+
+    transition: background var(--transition-fast),
+        transform var(--transition-fast),
+        opacity var(--transition-fast);
+}
+
+.player-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.player-btn:active {
+    transform: scale(0.97);
+}
+
+/* دکمه پخش */
+.play-btn {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+/* زمان */
+.player-time {
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 500;
+    direction: ltr;
+    unicode-bidi: plaintext;
+}
+
+/* دکمه زیرنویس وقتی خاموش باشد */
+.sub-btn.off {
+    opacity: 0.55;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* حالت فعال زیرنویس (طبق JS جدید) */
+.sub-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* اطلاعات زیر پلیر */
+.player-info-bar {
+    padding: 14px 16px;
+    background: linear-gradient(to right,
+            rgba(11, 16, 32, 1),
+            rgba(11, 16, 32, 0.92));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.player-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: var(--text-main);
+}
+
+.player-meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.8;
+}
+
+/* اکشن‌ها */
+.player-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.player-download-btn {
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: background var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.player-download-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.26);
+    transform: translateY(-1px);
+}
+
+/* زیرنویس */
+video::cue {
+    background: rgba(0, 0, 0, 0.72);
+    color: #ffffff;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+/* موبایل */
+@media (max-width: 768px) {
+    .player-wrapper {
+        margin: 80px 8px 20px;
+        border-radius: 18px;
+    }
+
+    .player-back-btn {
+        top: 12px;
+        right: 12px;
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+
+    .player-controls-overlay {
+        padding: 14px 12px 12px;
+        gap: 10px;
+    }
+
+    .player-btn {
+        min-width: 38px;
+        height: 38px;
+        padding: 0 10px;
+    }
+
+    .player-time {
+        font-size: 0.78rem;
+    }
+
+    .player-info-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .player-actions {
+        width: 100%;
+    }
+}
+
+/* موبایل خیلی کوچک */
+@media (max-width: 480px) {
+    .player-buttons-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .player-right-side,
+    .player-left-side {
+        justify-content: space-between;
+    }
+
+    .player-time {
+        font-size: 0.75rem;
+    }
+
+    video::cue {
+        font-size: 0.82rem;
+    }
+}
+
+/* --- استایل اختصاصی زیرنویس REmo+ --- */
+
+/* ۱. تنظیم ظاهر متن زیرنویس */
+video::cue {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    color: #ffffff !important;
+    font-family: 'Tahoma', sans-serif !important;
+    /* یا هر فونت فارسی که لود کردی */
+    font-size: 1.2rem !important;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 1) !important;
+}
+
+/* ۲. بالا کشیدن زیرنویس برای نرفتن زیر پروگرس‌بار و کنترل‌ها */
+/* این بخش در مرورگرهای کروم، اج و سافاری عمل می‌کند */
+video::-webkit-media-text-track-display {
+    transform: translateY(-80px) !important;
+    /* زیرنویس را ۸۰ پیکسل از کف ویدیو بالا می‌آورد */
+}
+
+/* ۳. هماهنگی با حالت تمام‌صفحه */
+.player-wrapper.player-fullscreen video::-webkit-media-text-track-display {
+    transform: translateY(-100px) !important;
+    /* در حالت تمام‌صفحه کمی بیشتر بالا برود */
+}
+
+/* ۴. برای فایرفاکس */
+video::-moz-subtitles {
+    margin-bottom: 80px !important;
+}

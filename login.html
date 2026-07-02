@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>ورود به +REMO | سبک دیزنی</title>
+    <link rel="stylesheet" href="css/base.css">
+
+    <style>
+        /* فونت پیشنهادی: می‌تونی بعداً با @font-face فونت کاستوم اضافه کنی */
+        :root {
+            --disney-blue: #4b7cf5;
+            --disney-purple: #7b5cf0;
+            --disney-pink: #ff8ac9;
+            --disney-gold: #fbd375;
+            --bg-night: #050819;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: radial-gradient(circle at top, #1b2655 0, #050819 55%, #02030a 100%);
+            color: #fdf9ff;
+            font-family: "Tahoma", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+        }
+
+        /* آسمان پرستاره سبک دیزنی */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(2px 2px at 10% 20%, rgba(255, 255, 255, 0.9) 50%, transparent 50%),
+                radial-gradient(2px 2px at 80% 30%, rgba(255, 255, 255, 0.8) 50%, transparent 50%),
+                radial-gradient(1.5px 1.5px at 30% 70%, rgba(255, 255, 255, 0.7) 50%, transparent 50%),
+                radial-gradient(1.5px 1.5px at 60% 85%, rgba(255, 255, 255, 0.7) 50%, transparent 50%);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .login-card {
+            position: relative;
+            background: linear-gradient(145deg, rgba(22, 29, 73, 0.95), rgba(33, 20, 75, 0.97));
+            padding: 32px 28px 36px;
+            border-radius: 24px;
+            box-shadow:
+                0 18px 40px rgba(0, 0, 0, 0.6),
+                0 0 40px rgba(123, 92, 240, 0.4);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            border: 1px solid rgba(251, 211, 117, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* هاله جادویی اطراف کارت */
+        .login-card::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: conic-gradient(from 220deg,
+                    rgba(255, 255, 255, 0.0) 0,
+                    rgba(75, 124, 245, 0.5) 25%,
+                    rgba(255, 138, 201, 0.5) 50%,
+                    rgba(251, 211, 117, 0.6) 75%,
+                    rgba(255, 255, 255, 0.0) 100%);
+            opacity: 0.35;
+            filter: blur(8px);
+            z-index: -1;
+        }
+
+        .login-title {
+            font-size: 1.4rem;
+            letter-spacing: 0.06em;
+            margin-bottom: 4px;
+            color: var(--disney-gold);
+            text-shadow:
+                0 0 10px rgba(251, 211, 117, 0.9),
+                0 0 25px rgba(75, 124, 245, 0.9);
+        }
+
+        .login-subtitle {
+            font-size: 0.9rem;
+            color: #e9e2ff;
+            opacity: 0.9;
+            margin-bottom: 22px;
+        }
+
+        .magic-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin: 0 auto 18px;
+            background: radial-gradient(circle, #fff 0, #fbd375 40%, transparent 70%);
+            box-shadow:
+                0 0 14px #fff,
+                0 0 26px var(--disney-blue),
+                0 0 40px var(--disney-purple);
+            animation: twinkle 2.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            from {
+                transform: translateY(0) scale(0.9);
+                opacity: 0.7;
+            }
+
+            to {
+                transform: translateY(-3px) scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 11px 12px;
+            margin: 8px 0 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.22), rgba(11, 11, 40, 0.85));
+            color: #fdf9ff;
+            outline: none;
+            font-size: 0.92rem;
+            transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+        }
+
+        .login-card input::placeholder {
+            color: rgba(232, 223, 255, 0.8);
+        }
+
+        .login-card input:focus {
+            border-color: var(--disney-pink);
+            box-shadow:
+                0 0 12px rgba(255, 138, 201, 0.5),
+                0 0 26px rgba(75, 124, 245, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .login-card button {
+            width: 100%;
+            padding: 11px 12px;
+            margin-top: 4px;
+            background: linear-gradient(135deg, var(--disney-blue), var(--disney-purple));
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow:
+                0 10px 24px rgba(18, 56, 155, 0.9),
+                0 0 22px rgba(75, 124, 245, 0.8);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.18s ease;
+        }
+
+        .login-card button:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow:
+                0 14px 32px rgba(18, 56, 155, 1),
+                0 0 30px rgba(123, 92, 240, 0.95);
+            filter: brightness(1.05);
+        }
+
+        .login-card button:active {
+            transform: translateY(0) scale(0.99);
+            box-shadow:
+                0 8px 18px rgba(10, 25, 80, 0.9),
+                0 0 16px rgba(75, 124, 245, 0.8);
+        }
+
+        .footer-note {
+            margin-top: 16px;
+            font-size: 0.78rem;
+            color: rgba(235, 225, 255, 0.85);
+        }
+
+        .footer-note span {
+            color: var(--disney-gold);
+            font-weight: 600;
+        }
+
+        /* ریسپانسیو کوچک */
+        @media (max-width: 480px) {
+            .login-card {
+                margin: 0 18px;
+                padding: 26px 20px 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <h2 class="login-title">ورود به +REMO</h2>
+        <div class="login-subtitle">یک لمس تا دنیای جادویی ربات‌های تو</div>
+        <div class="magic-dot"></div>
+
+        <input type="text" id="username" placeholder="نام کاربری جادویی">
+        <input type="password" id="password" placeholder="رمز عبور مخفی">
+
+        <button id="login-btn">ورود به ماجرا</button>
+
+        <div class="footer-note">
+            ساخت <span>+REMO</span> با کمی جادو و خیلی مهندسی
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById("login-btn").addEventListener("click", () => {
+            const u = document.getElementById("username").value;
+            const p = document.getElementById("password").value;
+            login(u, p);
+        });
+    </script>
+</body>
+
+</html>

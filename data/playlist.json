@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Interstellar",
+    "year": "2014",
+    "type": "movie",
+    "category": "Sci-Fi",
+    "cover": "assets/covers/interstellar.jpg",
+    "stream": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "download": "https://example.com/interstellar.mp4",
+    "subtitle": "assets/subtitles/interstellar.vtt",
+    "description": "A journey beyond the stars."
+  },
+  {
+    "id": 2,
+    "title": "The Batman",
+    "year": "2022",
+    "type": "movie",
+    "category": "Action",
+    "cover": "assets/covers/batman.jpg",
+    "stream": "https://www.w3schools.com/html/mov_bbb.mp4",
+    "download": "",
+    "subtitle": "",
+    "description": "Dark detective story."
+  }
+]
