@@ -293,25 +293,9 @@ function collectFormData(subtitleUrlFromSupabase = null) {
   const subtitleField =
     document.getElementById("subtitle")?.value.trim() || "";
 
-  // اگر Supabase URL برگردانده، از آن استفاده می‌کنیم
-  // در غیر این صورت اگر فایلی آپلود شده ولی URL نداریم، از object استفاده می‌کنیم
-  // در غیر این صورت هم از فیلد متنی
-  let subtitleValue;
-  if (subtitleUrlFromSupabase) {
-    subtitleValue = subtitleUrlFromSupabase;
-  } else if (uploadedSubtitleContent) {
-    subtitleValue = {
-      name: uploadedSubtitleContent.name,
-      type: uploadedSubtitleContent.type,
-    };
-  } else {
-    subtitleValue = subtitleField;
-  }
+  let subtitleValue = subtitleUrlFromSupabase || subtitleField;
 
   const data = {
-    // اگر در Supabase ستون id auto-increment داری، می‌تونی این را حذف کنی
-    id: editMode ? editMode : Number(uid()),
-
     title: document.getElementById("title")?.value.trim() || "",
     year: document.getElementById("year")?.value.trim() || "",
     type,
@@ -321,6 +305,11 @@ function collectFormData(subtitleUrlFromSupabase = null) {
     download: document.getElementById("download")?.value.trim() || "",
     subtitle: subtitleValue,
   };
+
+  // فقط در حالت ویرایش اگر لازم بود id را نگه دار
+  if (editMode) {
+    data.id = editMode;
+  }
 
   if (isSeries) {
     data.stream = "";
@@ -462,11 +451,7 @@ window.editMovie = async function (id) {
 
   const subtitleInput = document.getElementById("subtitle");
   if (subtitleInput) {
-    if (movie.subtitle && typeof movie.subtitle === "object") {
-      subtitleInput.value = movie.subtitle.name || "";
-    } else {
-      subtitleInput.value = movie.subtitle || "";
-    }
+    subtitleInput.value = movie.subtitle || "";
   }
 
   uploadedSubtitleContent = null;
