@@ -18,35 +18,10 @@ const seriesSection = document.getElementById("series-section");
 const seasonsContainer = document.getElementById("seasons-container");
 const addSeasonBtn = document.getElementById("add-season-btn");
 
-// فیلد فایل زیرنویس (اگر در DOM وجود داشته باشد)
+// فیلد فایل زیرنویس فیلم (اگر در DOM وجود داشته باشد)
 const subtitleFileInput = document.getElementById("sub-file");
 
 let editMode = null;
-
-// =============================
-// مدیریت زیرنویس آپلودی
-// =============================
-let uploadedSubtitleContent = null;
-
-// گوش دادن به تغییرات فیلد آپلود فایل زیرنویس
-if (subtitleFileInput) {
-  subtitleFileInput.addEventListener("change", function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (evt) {
-      uploadedSubtitleContent = {
-        name: file.name,
-        content: evt.target.result,
-        type: file.name.toLowerCase().endsWith(".srt") ? "srt" : "vtt",
-        file: file // اصل فایل را هم نگه می‌داریم برای آپلود به Supabase
-      };
-      alert("زیرنویس با موفقیت لود شد.");
-    };
-    reader.readAsText(file);
-  });
-}
 
 // =============================
 // UID – در Supabase می‌تونی بی‌نیاز باشی، ولی برای سازگاری نگه می‌داریم
@@ -78,39 +53,55 @@ async function getMovies() {
 }
 
 // =============================
-// آپلود زیرنویس به Supabase Storage (در صورت وجود فایل)
+// گرفتن URL زیرنویس فیلم (لینک دستی + آپلود فایل)
 // =============================
-async function uploadSubtitleIfNeeded() {
-  // اگر هیچ فایلی در uploadedSubtitleContent نیست، null برمی‌گردانیم
-  if (!uploadedSubtitleContent || !uploadedSubtitleContent.file) {
-    return null;
+async function getMovieSubtitleUrl() {
+  const subtitleInputEl = document.getElementById("subtitle");
+  const subtitleFileInputEl = subtitleFileInput;
+
+  // لینک دستی اولیه
+  let subtitleUrl =
+    subtitleInputEl && subtitleInputEl.value
+      ? subtitleInputEl.value.trim()
+      : "";
+
+  // اگر فایل انتخاب شده بود، آپلود کنیم و URL را جایگزین کنیم
+  if (
+    subtitleFileInputEl &&
+    subtitleFileInputEl.files &&
+    subtitleFileInputEl.files[0]
+  ) {
+    const file = subtitleFileInputEl.files[0];
+    const fileName = `${Date.now()}_${file.name}`;
+
+    const { error } = await supabase.storage
+      .from("subtitles")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+
+    if (error) {
+      console.error("خطا در آپلود زیرنویس فیلم:", error);
+      alert("خطا در آپلود زیرنویس فیلم");
+      // اگر آپلود fail شد، همان مقدار دستی (اگر هست) را نگه می‌داریم
+      return subtitleUrl;
+    }
+
+    const { data: publicUrlData, error: publicUrlError } = supabase.storage
+      .from("subtitles")
+      .getPublicUrl(fileName);
+
+    if (publicUrlError) {
+      console.error("خطا در گرفتن لینک عمومی زیرنویس فیلم:", publicUrlError);
+      return subtitleUrl;
+    }
+
+    subtitleUrl = publicUrlData.publicUrl;
   }
 
-  const file = uploadedSubtitleContent.file;
-  const fileName = `${Date.now()}_${file.name}`;
-
-  // ۱. آپلود به bucket subtitles
-  const { data, error } = await supabase.storage
-    .from("subtitles")
-    .upload(fileName, file);
-
-  if (error) {
-    console.error("Upload Error:", error);
-    alert("خطا در آپلود زیرنویس");
-    return null;
-  }
-
-  // ۲. گرفتن لینک عمومی
-  const { data: publicUrlData, error: publicUrlError } = supabase.storage
-    .from("subtitles")
-    .getPublicUrl(fileName);
-
-  if (publicUrlError) {
-    console.error("Public URL Error:", publicUrlError);
-    return null;
-  }
-
-  return publicUrlData.publicUrl; // رشته‌ی URL
+  return subtitleUrl;
 }
 
 // =============================
@@ -181,6 +172,11 @@ function createEpisodeItem(data = {}) {
         placeholder="لینک زیرنویس"
         value="${data.subtitle || ""}"
       >
+
+      <div class="form-group" style="margin-top:6px;">
+        <label>آپلود زیرنویس قسمت</label>
+        <input type="file" class="episode-subfile" accept=".srt,.vtt">
+      </div>
 
       <button
         type="button"
@@ -255,30 +251,91 @@ function createSeasonItem(data = {}) {
 }
 
 // =============================
-// جمع‌آوری فصل‌ها از DOM
+// جمع‌آوری فصل‌ها از DOM + آپلود زیرنویس اپیزودها
 // =============================
-function collectSeasonsData() {
+async function collectSeasonsData() {
   const seasons = [];
 
-  document.querySelectorAll(".season-item").forEach((seasonEl, sIndex) => {
+  const seasonEls = document.querySelectorAll(".season-item");
+
+  for (let sIndex = 0; sIndex < seasonEls.length; sIndex++) {
+    const seasonEl = seasonEls[sIndex];
     const episodes = [];
 
-    seasonEl.querySelectorAll(".episode-item").forEach((epEl, eIndex) => {
+    const episodeEls = seasonEl.querySelectorAll(".episode-item");
+
+    for (let eIndex = 0; eIndex < episodeEls.length; eIndex++) {
+      const epEl = episodeEls[eIndex];
+
+      const episodeTitle =
+        epEl.querySelector(".episode-title")?.value.trim() || "";
+      const episodeStream =
+        epEl.querySelector(".episode-stream")?.value.trim() || "";
+      const episodeDownload =
+        epEl.querySelector(".episode-download")?.value.trim() || "";
+      const episodeSubtitleField =
+        epEl.querySelector(".episode-subtitle")?.value.trim() || "";
+
+      const episodeSubtitleInput = epEl.querySelector(".episode-subfile");
+      let episodeSubtitleUrl = episodeSubtitleField;
+
+      // اگر فایل زیرنویس برای این اپیزود انتخاب شده بود
+      if (
+        episodeSubtitleInput &&
+        episodeSubtitleInput.files &&
+        episodeSubtitleInput.files[0]
+      ) {
+        const file = episodeSubtitleInput.files[0];
+        const fileName = `${Date.now()}_${file.name}`;
+
+        const { error } = await supabase.storage
+          .from("subtitles")
+          .upload(fileName, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type || "application/octet-stream",
+          });
+
+        if (error) {
+          console.error(
+            "خطا در آپلود زیرنویس اپیزود:",
+            episodeTitle,
+            error
+          );
+          alert(
+            `خطا در آپلود زیرنویس قسمت "${episodeTitle || eIndex + 1}".`
+          );
+          // در صورت خطا، همان لینک دستی (اگر هست) را نگه می‌داریم
+        } else {
+          const { data: publicUrlData, error: publicUrlError } =
+            supabase.storage.from("subtitles").getPublicUrl(fileName);
+
+          if (publicUrlError) {
+            console.error(
+              "خطا در گرفتن لینک عمومی زیرنویس اپیزود:",
+              publicUrlError
+            );
+          } else {
+            episodeSubtitleUrl = publicUrlData.publicUrl;
+          }
+        }
+      }
+
       episodes.push({
         episodeNumber: eIndex + 1,
-        title: epEl.querySelector(".episode-title")?.value.trim() || "",
-        stream: epEl.querySelector(".episode-stream")?.value.trim() || "",
-        download: epEl.querySelector(".episode-download")?.value.trim() || "",
-        subtitle: epEl.querySelector(".episode-subtitle")?.value.trim() || "",
+        title: episodeTitle,
+        stream: episodeStream,
+        download: episodeDownload,
+        subtitle: episodeSubtitleUrl,
       });
-    });
+    }
 
     seasons.push({
       seasonNumber: sIndex + 1,
       title: seasonEl.querySelector(".season-title")?.value.trim() || "",
       episodes,
     });
-  });
+  }
 
   return seasons;
 }
@@ -293,7 +350,7 @@ function collectFormData(subtitleUrlFromSupabase = null) {
   const subtitleField =
     document.getElementById("subtitle")?.value.trim() || "";
 
-  let subtitleValue = subtitleUrlFromSupabase || subtitleField;
+  const subtitleValue = subtitleUrlFromSupabase || subtitleField;
 
   const data = {
     title: document.getElementById("title")?.value.trim() || "",
@@ -311,12 +368,12 @@ function collectFormData(subtitleUrlFromSupabase = null) {
     data.id = editMode;
   }
 
-  if (isSeries) {
-    data.stream = "";
-    data.seasons = collectSeasonsData();
-  } else {
+  if (!isSeries) {
     data.stream = document.getElementById("stream")?.value.trim() || "";
     data.seasons = [];
+  } else {
+    // برای سریال، seasons و stream را بیرون از این تابع ست می‌کنیم
+    data.stream = "";
   }
 
   return data;
@@ -326,7 +383,6 @@ function collectFormData(subtitleUrlFromSupabase = null) {
 // ذخیره در Supabase (insert / update)
 // =============================
 async function saveMovieToSupabase(data) {
-  // اگر در جدول contents ستونی به نام id داری و می‌خواهی update کنی:
   if (editMode) {
     const { error } = await supabase
       .from("contents")
@@ -390,6 +446,10 @@ async function renderAdminList() {
 
   adminList.innerHTML = movies
     .map((movie) => {
+      // جلوگیری از ساخت کارت ناقص یا subtitle-only
+      if (!movie || !movie.title) return "";
+      if (movie.type === "subtitle") return "";
+
       return `
         <div class="admin-card">
           <img
@@ -454,7 +514,6 @@ window.editMovie = async function (id) {
     subtitleInput.value = movie.subtitle || "";
   }
 
-  uploadedSubtitleContent = null;
   if (subtitleFileInput) {
     subtitleFileInput.value = "";
   }
@@ -510,7 +569,6 @@ function resetFormState() {
   seasonsContainer.innerHTML = "";
   setSeriesMode(false);
 
-  uploadedSubtitleContent = null;
   if (subtitleFileInput) {
     subtitleFileInput.value = "";
   }
@@ -563,19 +621,25 @@ if (form) {
       }
     }
 
-    if (
-      type === "series" &&
-      (!collectSeasonsData() || collectSeasonsData().length === 0)
-    ) {
-      alert("حداقل یک فصل اضافه کنید.");
-      return;
+    let seasonsData = [];
+    if (type === "series") {
+      seasonsData = await collectSeasonsData();
+      if (!seasonsData || seasonsData.length === 0) {
+        alert("حداقل یک فصل اضافه کنید.");
+        return;
+      }
     }
 
-    // ۲. اگر زیرنویس فایل داشتیم، اول به Supabase Storage آپلود می‌کنیم
-    const subtitleUrl = await uploadSubtitleIfNeeded();
+    // ۲. گرفتن URL نهایی زیرنویس فیلم (لینک دستی + آپلود فایل)
+    const subtitleUrl = await getMovieSubtitleUrl();
 
     // ۳. جمع‌آوری داده‌ها با در نظر گرفتن subtitleUrl
     const data = collectFormData(subtitleUrl);
+
+    if (type === "series") {
+      data.seasons = seasonsData;
+      data.stream = ""; // برای سریال، استریم کلی خالی می‌ماند
+    }
 
     // ۴. ذخیره در Supabase
     const ok = await saveMovieToSupabase(data);
