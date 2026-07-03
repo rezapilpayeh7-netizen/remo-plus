@@ -1,6 +1,5 @@
 // --- Import Supabase ---
-import supabase from "./js/supabase-config.js";
-
+import supabase from "./supabase-config.js";
 // --- انتخاب عناصر DOM ---
 const detailsCover       = document.getElementById("detailsCover");
 const detailsTitle       = document.getElementById("detailsTitle");
