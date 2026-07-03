@@ -68,13 +68,15 @@
                     <input type="text" id="download" class="admin-input" placeholder="لینک دانلود مستقیم mp4">
                 </div>
 
+                <!-- بخش زیرنویس فیلم: لینک دستی + آپلود فایل -->
                 <div class="admin-field">
                     <label class="admin-label">آدرس زیرنویس (VTT - اختیاری):</label>
                     <input type="text" id="subtitle" class="admin-input" placeholder="assets/subtitles/name.vtt">
                 </div>
-                <div class="form-group">
-                    <label for="sub-file">آپلود فایل زیرنویس (SRT یا VTT):</label>
-                    <input type="file" id="sub-file" accept=".srt,.vtt">
+
+                <div class="admin-field">
+                    <label class="admin-label">آپلود فایل زیرنویس (SRT یا VTT):</label>
+                    <input type="file" id="sub-file" accept=".srt,.vtt" class="admin-input">
                 </div>
 
                 <div class="admin-field">
@@ -95,7 +97,9 @@
                 <!-- مدیریت فصل‌ها و قسمت‌ها برای سریال -->
                 <div id="series-section" class="glass-card" style="display:none; margin-top:10px;">
                     <h3 class="h3" style="margin-bottom:10px;">مدیریت فصل‌ها و قسمت‌ها</h3>
+
                     <div id="seasons-container"></div>
+
                     <button type="button" id="add-season-btn" class="btn-secondary" style="margin-top:10px;">
                         + افزودن فصل جدید
                     </button>
