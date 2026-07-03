@@ -1,6 +1,5 @@
 // --- Import Supabase ---
-import supabase from "./js/supabase-config.js";
-
+import supabase from "./supabase-config.js";
 // --- DOM Elements ---
 const videoElement     = document.getElementById("videoPlayer");
 const subtitleTrack    = document.getElementById("subtitleTrack");
