@@ -1,5 +1,5 @@
 // --- Import Supabase ---
-import supabase from "./js/supabase-config.js";
+import supabase from "./supabase-config.js";
 
 // --- Global State ---
 let favorites = JSON.parse(localStorage.getItem("remo_favorites")) || [];
