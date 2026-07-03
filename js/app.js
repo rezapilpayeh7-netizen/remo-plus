@@ -24,13 +24,14 @@ async function loadMovies() {
 
     if (error) {
       console.error("Error fetching data from Supabase:", error);
-      movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
+      if (movieGrid) {
+        movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
+      }
       return;
     }
 
-    // اینجا فرض می‌کنیم اسکیمای Supabase با ساختار قبلی هماهنگ است:
-    // title, year, category, cover, type, stream, seasons, ...
-    // اگر نام ستون‌ها فرق دارد، این‌جا باید map انجام شود.
+    // جدول contents باید ستون‌هایی مثل:
+    // id, title, year, category, cover, type, stream, seasons, ...
     allMovies = contents || [];
 
     buildCategoryFilters();
@@ -38,12 +39,16 @@ async function loadMovies() {
     renderContinueWatching(allMovies);
   } catch (err) {
     console.error("خطا در لود داده‌ها", err);
-    movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
+    if (movieGrid) {
+      movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
+    }
   }
 }
 
 // --- Build Category Filters Dynamically ---
 function buildCategoryFilters() {
+  if (!categoryFilters) return;
+
   const categories = new Set();
 
   allMovies.forEach((movie) => {
@@ -61,6 +66,7 @@ function buildCategoryFilters() {
 
   // سایر دسته‌ها
   categories.forEach((cat) => {
+    if (!cat) return;
     const btn = document.createElement("button");
     btn.classList.add("category-btn");
     btn.setAttribute("data-cat", cat);
@@ -107,6 +113,8 @@ function filterAndRender() {
 
 // --- Render Movie Grid ---
 function renderMovies(movies) {
+  if (!movieGrid) return;
+
   movieGrid.innerHTML = "";
 
   if (!movies || movies.length === 0) {
@@ -177,6 +185,8 @@ function toggleFavorite(id) {
 
 // --- Render Continue Watching Section ---
 function renderContinueWatching(movies) {
+  if (!continueSection || !continueGrid) return;
+
   const continueRaw = localStorage.getItem("continueWatching");
   const continueList = continueRaw ? JSON.parse(continueRaw) : [];
 
