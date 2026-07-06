@@ -1,78 +1,87 @@
-// --- Import Supabase ---
+// ============================================
+// REMO+ - details.js (اصلاح شده)
+// صفحه جزئیات محتوا - نمایش اطلاعات، مدیریت علاقه‌مندی و ادامه تماشا
+// ============================================
+
 import supabase from "./supabase-config.js";
-// --- انتخاب عناصر DOM ---
-const detailsCover       = document.getElementById("detailsCover");
-const detailsTitle       = document.getElementById("detailsTitle");
-const detailsMeta        = document.getElementById("detailsMeta");
+
+// --- DOM Elements ---
+const detailsCover = document.getElementById("detailsCover");
+const detailsTitle = document.getElementById("detailsTitle");
+const detailsMeta = document.getElementById("detailsMeta");
 const detailsDescription = document.getElementById("detailsDescription");
-const detailsLong        = document.getElementById("detailsLong");
-const detailsInfo        = document.getElementById("detailsInfo");
+const detailsLong = document.getElementById("detailsLong");
+const detailsInfo = document.getElementById("detailsInfo");
 
-const watchBtn           = document.getElementById("watchBtn");
-const downloadBtn        = document.getElementById("downloadBtn");
-const favoriteBtn        = document.getElementById("favoriteBtn");
+const watchBtn = document.getElementById("watchBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const favoriteBtn = document.getElementById("favoriteBtn");
 
-const seasonsWrapper     = document.getElementById("seasonsWrapper");
-const seasonTabs         = document.getElementById("seasonTabs");
-const episodesList       = document.getElementById("episodesList");
+const seasonsWrapper = document.getElementById("seasonsWrapper");
+const seasonTabs = document.getElementById("seasonTabs");
+const episodesList = document.getElementById("episodesList");
 
-// --- توابع کمکی ---
+// --- Schema Standard ---
+// استاندارد فیلدهای رکورد content:
+// id, title, type, year, category, description,
+// cover_url, stream_url, download_url, subtitle_url,
+// seasons (JSON برای سریال)
+// 
+// ساختار فصل:
+// { season_number: number, episodes: [...] }
+//
+// ساختار قسمت:
+// { episode_number: number, title: string, duration: string, thumbnail_url: string, stream_url: string, subtitle_url: string }
 
-// گرفتن id از URL
+// --- Helper Functions ---
+
 function getContentId() {
   return new URLSearchParams(window.location.search).get("id");
 }
 
-// خواندن continue-watching برای این محتوا (بر اساس id)
 function getContinueState(contentId) {
-  const cwRaw = localStorage.getItem("remo_continue");
-  if (!cwRaw) return null;
-
+  const raw = localStorage.getItem("remo_continue");
+  if (!raw) return null;
+  
   try {
-    const cwList = JSON.parse(cwRaw); // آرایه‌ای از آبجکت‌ها
-    // ساخت پیشنهادی: { id, type, season, episode, position }
-    return cwList.find(item => String(item.id) === String(contentId)) || null;
-  } catch (err) {
-    console.error("خطا در parse remo_continue:", err);
+    const list = JSON.parse(raw);
+    return list.find(item => String(item.id) === String(contentId)) || null;
+  } catch {
     return null;
   }
 }
 
-// خواندن لیست علاقه‌مندی‌ها
 function getFavorites() {
-  const favRaw = localStorage.getItem("remo_favorites");
-  if (!favRaw) return [];
+  const raw = localStorage.getItem("remo_favorites");
+  if (!raw) return [];
   try {
-    return JSON.parse(favRaw);
-  } catch (err) {
-    console.error("خطا در parse remo_favorites:", err);
+    return JSON.parse(raw);
+  } catch {
     return [];
   }
 }
 
-// ذخیره علاقه‌مندی‌ها
 function setFavorites(list) {
   localStorage.setItem("remo_favorites", JSON.stringify(list));
 }
 
-// به‌روزرسانی ظاهر دکمه‌ی favorite
-function updateFavoriteButton(isFavorite) {
+function updateFavoriteButton(isFav) {
   if (!favoriteBtn) return;
-  favoriteBtn.textContent = isFavorite ? "★ در علاقه‌مندی‌ها" : "★ افزودن به علاقه‌مندی";
-  favoriteBtn.classList.toggle("btn-secondary-active", isFavorite);
+  favoriteBtn.textContent = isFav ? "★ در علاقه‌مندی‌ها" : "★ افزودن به علاقه‌مندی";
+  favoriteBtn.classList.toggle("btn-secondary-active", isFav);
 }
 
-// --- تابع اصلی راه‌اندازی صفحه جزئیات ---
+// --- Main Initialization ---
 
 async function initializeDetailsPage() {
   const contentId = getContentId();
-
+  
   if (!contentId) {
-    console.error("شناسه محتوا در URL یافت نشد");
+    console.error("شناسه محتوا یافت نشد");
     return;
   }
 
-  // --- دریافت داده از Supabase ---
+  // Fetch from Supabase
   let content = null;
   try {
     const { data, error } = await supabase
@@ -82,254 +91,253 @@ async function initializeDetailsPage() {
       .single();
 
     if (error) {
-      console.error("خطا در دریافت محتوا از Supabase:", error);
+      console.error("Supabase error:", error);
       return;
     }
-
     content = data;
   } catch (err) {
-    console.error("خطا در ارتباط با Supabase در details.js:", err);
+    console.error("Connection error:", err);
     return;
   }
 
   if (!content) {
-    console.error("محتوای مورد نظر در داده‌ها یافت نشد");
+    console.error("محتوا یافت نشد");
     return;
   }
 
-  // --- پرکردن اطلاعات اصلی ---
+  // Render content info
+  renderContentInfo(content);
+  
+  // Render metadata
+  renderMetadata(content);
+  
+  // Render side info
+  renderSideInfo(content);
+  
+  // Setup action buttons
+  setupWatchButton(content);
+  setupDownloadButton(content);
+  setupFavoriteButton(content);
+  
+  // Render seasons if series
+  if (content.type === "series") {
+    renderSeriesSection(content);
+  }
+}
+
+// --- Render Functions ---
+
+function renderContentInfo(content) {
   if (detailsTitle) {
     detailsTitle.textContent = content.title || "بدون عنوان";
   }
 
   if (detailsDescription) {
-    detailsDescription.textContent = content.description || "توضیحی ثبت نشده است.";
+    detailsDescription.textContent = content.description || "توضیحی ثبت نشده";
   }
 
   if (detailsLong) {
-    detailsLong.textContent = content.longDescription || content.description || "";
+    detailsLong.textContent = content.description || "";
   }
 
   if (detailsCover) {
-    if (content.cover) {
-      detailsCover.src = content.cover;
-      detailsCover.alt = content.title || "کاور";
-    } else {
-      detailsCover.src = "assets/covers/default-cover.jpg"; // اگر داری
-      detailsCover.alt = "کاور پیش‌فرض";
-    }
-  }
-
-  // --- متا دیتا ---
-  if (detailsMeta) {
-    const metaParts = [];
-
-    if (content.year) {
-      metaParts.push(`<span>${content.year}</span>`);
-    }
-
-    const typeLabel = content.type === "series" ? "سریال" : "فیلم";
-    metaParts.push(`<span>${typeLabel}</span>`);
-
-    if (content.type === "series" && Array.isArray(content.seasons)) {
-      metaParts.push(`<span>${content.seasons.length} فصل</span>`);
-    }
-
-    if (content.duration && content.type === "movie") {
-      metaParts.push(`<span>${content.duration}</span>`);
-    }
-
-    detailsMeta.innerHTML = metaParts.join('<span class="meta-separator">•</span>');
-  }
-
-  // --- اطلاعات جانبی در ستون راست ---
-  if (detailsInfo) {
-    detailsInfo.innerHTML = "";
-
-    if (content.category) {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <h4 class="h4" style="margin-bottom:5px;">ژانر</h4>
-        <p class="text-soft">${content.category}</p>
-      `;
-      detailsInfo.appendChild(div);
-    }
-
-    if (content.director) {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <h4 class="h4" style="margin-bottom:5px;">کارگردان</h4>
-        <p class="text-soft">${content.director}</p>
-      `;
-      detailsInfo.appendChild(div);
-    }
-
-    if (content.cast) {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <h4 class="h4" style="margin-bottom:5px;">بازیگران</h4>
-        <p class="text-soft">${Array.isArray(content.cast) ? content.cast.join("، ") : content.cast}</p>
-      `;
-      detailsInfo.appendChild(div);
-    }
-  }
-
-  // --- دکمه دانلود ---
-  if (downloadBtn) {
-    if (content.download) {
-      downloadBtn.href          = content.download;
-      downloadBtn.style.display = "inline-flex";
-    } else {
-      downloadBtn.style.display = "none";
-    }
-  }
-
-  // --- دکمه پخش با درنظر گرفتن continue-watching ---
-  const cwState = getContinueState(content.id);
-
-  if (watchBtn) {
-    if (content.type === "movie") {
-      // فیلم: فقط روی id
-      watchBtn.href = `player.html?id=${content.id}`;
-      if (cwState && typeof cwState.position === "number") {
-        watchBtn.textContent = "▶ ادامه تماشا";
-      } else {
-        watchBtn.textContent = "▶ پخش فیلم";
-      }
-    } else if (content.type === "series") {
-      // سریال: سعی کن بر اساس continue-watching برود به فصل/قسمت جاری
-      let seasonNumber = 1;
-      let episodeNumber = 1;
-
-      if (cwState && cwState.season && cwState.episode) {
-        seasonNumber  = cwState.season;
-        episodeNumber = cwState.episode;
-        watchBtn.textContent = `▶ ادامه فصل ${seasonNumber} قسمت ${episodeNumber}`;
-      } else {
-        watchBtn.textContent = "▶ پخش از قسمت اول";
-      }
-
-      watchBtn.href = `player.html?id=${content.id}&s=${seasonNumber}&e=${episodeNumber}`;
-    }
-  }
-
-  // --- علاقه‌مندی‌ها ---
-  let favorites   = getFavorites();
-  let isFavorite  = favorites.some(fav => String(fav.id) === String(content.id));
-  updateFavoriteButton(isFavorite);
-
-  if (favoriteBtn) {
-    favoriteBtn.addEventListener("click", () => {
-      favorites = getFavorites(); // ری‌فرش برای اطمینان
-      const exists = favorites.some(fav => String(fav.id) === String(content.id));
-
-      let updated;
-      if (exists) {
-        // حذف از علاقه‌مندی‌ها
-        updated = favorites.filter(fav => String(fav.id) !== String(content.id));
-        isFavorite = false;
-      } else {
-        // افزودن؛ فقط اطلاعات ضروری را ذخیره کن تا سایز کوچک بماند
-        const minimalContent = {
-          id: content.id,
-          title: content.title,
-          cover: content.cover,
-          type: content.type,
-          year: content.year,
-          category: content.category
-        };
-        updated = [...favorites, minimalContent];
-        isFavorite = true;
-      }
-
-      setFavorites(updated);
-      updateFavoriteButton(isFavorite);
-    });
-  }
-
-  // --- اگر سریال است، فصل‌ها و قسمت‌ها را رندر کن ---
-  if (content.type === "series" && Array.isArray(content.seasons) && content.seasons.length > 0) {
-    if (seasonsWrapper) {
-      seasonsWrapper.style.display = "block";
-    }
-    renderSeriesDetails(content, cwState);
-  } else {
-    if (seasonsWrapper) {
-      seasonsWrapper.style.display = "none";
-    }
+    detailsCover.src = content.cover_url || "assets/default-cover.jpg";
+    detailsCover.alt = content.title || "کاور";
   }
 }
 
-// --- رندر فصل‌ها و اپیزودها ---
+function renderMetadata(content) {
+  if (!detailsMeta) return;
 
-function renderSeriesDetails(seriesData, cwState) {
-  if (!seasonTabs || !episodesList) return;
+  const parts = [];
+  
+  if (content.year) {
+    parts.push(`<span>${content.year}</span>`);
+  }
 
-  seasonTabs.innerHTML   = "";
+  const typeLabel = content.type === "series" ? "سریال" : "فیلم";
+  parts.push(`<span>${typeLabel}</span>`);
+
+  if (content.type === "series" && Array.isArray(content.seasons)) {
+    parts.push(`<span>${content.seasons.length} فصل</span>`);
+  }
+
+  detailsMeta.innerHTML = parts.join('<span class="meta-separator">•</span>');
+}
+
+function renderSideInfo(content) {
+  if (!detailsInfo) return;
+
+  detailsInfo.innerHTML = "";
+
+  const fields = [
+    { key: "category", label: "ژانر" },
+    { key: "director", label: "کارگردان" },
+    { key: "cast", label: "بازیگران", isArray: true }
+  ];
+
+  fields.forEach(field => {
+    const value = content[field.key];
+    if (!value) return;
+
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <h4 class="h4" style="margin-bottom:5px;">${field.label}</h4>
+      <p class="text-soft">
+        ${field.isArray && Array.isArray(value) ? value.join("، ") : value}
+      </p>
+    `;
+    detailsInfo.appendChild(div);
+  });
+}
+
+// --- Action Buttons ---
+
+function setupDownloadButton(content) {
+  if (!downloadBtn) return;
+  
+  if (content.download_url) {
+    downloadBtn.href = content.download_url;
+    downloadBtn.style.display = "inline-flex";
+  } else {
+    downloadBtn.style.display = "none";
+  }
+}
+
+function setupWatchButton(content) {
+  if (!watchBtn) return;
+
+  const cwState = getContinueState(content.id);
+
+  if (content.type === "movie") {
+    watchBtn.href = `player.html?id=${content.id}`;
+    const hasProgress = cwState && typeof cwState.progress === "number" && cwState.progress > 0;
+    watchBtn.textContent = hasProgress ? "▶ ادامه تماشا" : "▶ پخش فیلم";
+    
+  } else if (content.type === "series") {
+    let s = 1, e = 1;
+    
+    if (cwState?.season && cwState?.episode) {
+      s = cwState.season;
+      e = cwState.episode;
+      watchBtn.textContent = `▶ ادامه فصل ${s} قسمت ${e}`;
+    } else {
+      watchBtn.textContent = "▶ پخش از قسمت اول";
+    }
+    
+    watchBtn.href = `player.html?id=${content.id}&s=${s}&e=${e}`;
+  }
+}
+
+function setupFavoriteButton(content) {
+  if (!favoriteBtn) return;
+
+  let favorites = getFavorites();
+  let isFav = favorites.some(fav => String(fav.id) === String(content.id));
+  updateFavoriteButton(isFav);
+
+  favoriteBtn.addEventListener("click", () => {
+    favorites = getFavorites();
+    const exists = favorites.some(fav => String(fav.id) === String(content.id));
+
+    let updated;
+    if (exists) {
+      updated = favorites.filter(fav => String(fav.id) !== String(content.id));
+      isFav = false;
+    } else {
+      const minimal = {
+        id: content.id,
+        title: content.title,
+        cover_url: content.cover_url,
+        type: content.type,
+        year: content.year,
+        category: content.category
+      };
+      updated = [...favorites, minimal];
+      isFav = true;
+    }
+
+    setFavorites(updated);
+    updateFavoriteButton(isFav);
+  });
+}
+
+// --- Series Section ---
+
+function renderSeriesSection(content) {
+  if (!seasonsWrapper || !seasonTabs || !episodesList) return;
+  
+  if (!Array.isArray(content.seasons) || content.seasons.length === 0) {
+    seasonsWrapper.style.display = "none";
+    return;
+  }
+
+  seasonsWrapper.style.display = "block";
+  
+  const cwState = getContinueState(content.id);
+  
+  // Clear previous
+  seasonTabs.innerHTML = "";
   episodesList.innerHTML = "";
 
-  seriesData.seasons.forEach((season, index) => {
+  // Create tabs
+  content.seasons.forEach((season, index) => {
+    const seasonNum = season.season_number || (index + 1);
+    
     const tab = document.createElement("button");
     tab.className = "season-tab";
-    tab.textContent = `فصل ${season.seasonNumber}`;
+    tab.textContent = `فصل ${seasonNum}`;
     tab.dataset.seasonIndex = index;
+    tab.dataset.seasonNumber = seasonNum;
 
-    // فصل فعال اولیه: یا فصل continue-watching، یا فصل اول
-    const shouldActive =
-      (cwState && cwState.season === season.seasonNumber) ||
-      (!cwState && index === 0);
-
-    if (shouldActive) {
+    const isActive = (cwState?.season === seasonNum) || (!cwState && index === 0);
+    if (isActive) {
       tab.classList.add("active");
     }
 
     tab.addEventListener("click", () => {
       document.querySelectorAll(".season-tab").forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
-      renderEpisodes(seriesData.id, season);
+      renderEpisodes(content.id, season);
     });
 
     seasonTabs.appendChild(tab);
   });
 
-  // رندر فصل اولیه
-  let initialSeason = seriesData.seasons[0];
-
-  if (cwState && cwState.season) {
-    const foundSeason = seriesData.seasons.find(s => s.seasonNumber === cwState.season);
-    if (foundSeason) {
-      initialSeason = foundSeason;
-    }
+  // Render initial season
+  let initialSeason = content.seasons[0];
+  if (cwState?.season) {
+    const found = content.seasons.find(s => s.season_number === cwState.season);
+    if (found) initialSeason = found;
   }
-
-  renderEpisodes(seriesData.id, initialSeason);
+  
+  renderEpisodes(content.id, initialSeason);
 }
 
-// رندر اپیزودهای یک فصل
 function renderEpisodes(seriesId, season) {
   if (!episodesList) return;
-
+  
   episodesList.innerHTML = "";
 
-  if (!season.episodes || !Array.isArray(season.episodes)) return;
+  if (!season?.episodes || !Array.isArray(season.episodes)) return;
 
-  season.episodes.forEach(episode => {
+  season.episodes.forEach(ep => {
+    const epNum = ep.episode_number;
+    const title = ep.title || `قسمت ${epNum}`;
+    const duration = ep.duration || "";
+    const thumb = ep.thumbnail_url || "assets/default-episode.jpg";
+
     const card = document.createElement("div");
     card.className = "episode-card";
 
-    const thumb = episode.thumbnail || "assets/icons/default-episode-thumb.png";
-    const epTitle = episode.title || `قسمت ${episode.episodeNumber}`;
-    const epDuration = episode.duration || "";
-
     card.innerHTML = `
-      <img src="${thumb}" alt="قسمت ${episode.episodeNumber}" class="episode-thumb">
+      <img src="${thumb}" alt="${title}" class="episode-thumb" loading="lazy">
       <div class="episode-info">
-        <h4 class="episode-info-title">قسمت ${episode.episodeNumber}: ${epTitle}</h4>
-        <p class="episode-info-meta">${epDuration}</p>
+        <h4 class="episode-info-title">قسمت ${epNum}: ${title}</h4>
+        ${duration ? `<p class="episode-info-meta">${duration}</p>` : ""}
       </div>
-      <a href="player.html?id=${seriesId}&s=${season.seasonNumber}&e=${episode.episodeNumber}"
-         class="btn-secondary"
-         style="margin-left:auto;">
+      <a href="player.html?id=${seriesId}&s=${season.season_number}&e=${epNum}"
+         class="btn-secondary play-ep-btn">
          ▶ پخش
       </a>
     `;
@@ -338,5 +346,5 @@ function renderEpisodes(seriesId, season) {
   });
 }
 
-// --- شروع کار ---
+// --- Init ---
 document.addEventListener("DOMContentLoaded", initializeDetailsPage);
