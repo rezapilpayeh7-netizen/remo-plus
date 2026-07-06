@@ -1,193 +1,219 @@
-// --- Import Supabase ---
+// ============================================
+// REMO+ - app.js (اصلاح شده)
+// صفحه اصلی - نمایش لیست محتوا، جستجو، فیلتر و ادامه تماشا
+// ============================================
+
 import supabase from "./supabase-config.js";
 
-// --- Global State ---
+// --- State ---
 let favorites = JSON.parse(localStorage.getItem("remo_favorites")) || [];
-let allMovies = [];
+let allContents = [];
 let activeCategory = "all";
 let searchQuery = "";
 
-// DOM Elements
+// --- DOM Elements ---
 const movieGrid = document.getElementById("movie-grid");
 const searchInput = document.getElementById("search-input");
 const categoryFilters = document.getElementById("category-filters");
 const continueSection = document.getElementById("continue-watching-section");
 const continueGrid = document.getElementById("continue-grid");
 
-// --- Load Movies from Supabase ---
-async function loadMovies() {
+// --- Schema Standard ---
+// استاندارد فیلدهای رکورد content:
+// id, title, type, year, category, description,
+// cover_url, stream_url, download_url, subtitle_url,
+// seasons (JSON برای سریال)
+
+// --- Load Contents from Supabase ---
+async function loadContents() {
   try {
     const { data: contents, error } = await supabase
       .from("contents")
       .select("*")
-      .order("id", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching data from Supabase:", error);
-      if (movieGrid) {
-        movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
-      }
+      console.error("Supabase error:", error);
+      renderError("خطا در بارگذاری محتوا از سرور");
       return;
     }
 
-    // جدول contents باید ستون‌هایی مثل:
-    // id, title, year, category, cover, type, stream, seasons, ...
-    allMovies = contents || [];
-
+    allContents = contents || [];
+    
     buildCategoryFilters();
     filterAndRender();
-    renderContinueWatching(allMovies);
+    renderContinueWatching();
+
   } catch (err) {
-    console.error("خطا در لود داده‌ها", err);
-    if (movieGrid) {
-      movieGrid.innerHTML = "<p>خطا در بارگذاری محتوا</p>";
-    }
+    console.error("Load error:", err);
+    renderError("خطا در بارگذاری محتوا");
   }
 }
 
-// --- Build Category Filters Dynamically ---
+function renderError(message) {
+  if (movieGrid) {
+    movieGrid.innerHTML = `<p class="error-message">${message}</p>`;
+  }
+}
+
+// --- Build Category Filters ---
 function buildCategoryFilters() {
   if (!categoryFilters) return;
 
   const categories = new Set();
-
-  allMovies.forEach((movie) => {
-    if (movie.category) {
-      movie.category.split(",").forEach((cat) => {
-        categories.add(cat.trim());
+  
+  allContents.forEach((item) => {
+    if (item.category) {
+      item.category.split(",").forEach((cat) => {
+        const trimmed = cat.trim();
+        if (trimmed) categories.add(trimmed);
       });
     }
   });
 
-  // دکمه "همه"
+  const sortedCategories = Array.from(categories).sort();
+
   categoryFilters.innerHTML = `
     <button class="category-btn active" data-cat="all">همه</button>
   `;
 
-  // سایر دسته‌ها
-  categories.forEach((cat) => {
-    if (!cat) return;
+  sortedCategories.forEach((cat) => {
     const btn = document.createElement("button");
-    btn.classList.add("category-btn");
-    btn.setAttribute("data-cat", cat);
-    btn.innerText = cat;
+    btn.className = "category-btn";
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
     categoryFilters.appendChild(btn);
   });
 
-  // هندل کلیک روی دسته‌ها (یک بار bind می‌کنیم)
-  categoryFilters.addEventListener("click", (event) => {
-    if (event.target.classList.contains("category-btn")) {
-      document
-        .querySelectorAll(".category-btn")
-        .forEach((btn) => btn.classList.remove("active"));
+  // Event delegation
+  categoryFilters.addEventListener("click", handleCategoryClick);
+}
 
-      event.target.classList.add("active");
-      activeCategory = event.target.getAttribute("data-cat");
-      filterAndRender();
-    }
+function handleCategoryClick(e) {
+  if (!e.target.classList.contains("category-btn")) return;
+
+  document.querySelectorAll(".category-btn").forEach((btn) => {
+    btn.classList.remove("active");
   });
+
+  e.target.classList.add("active");
+  activeCategory = e.target.dataset.cat;
+  filterAndRender();
 }
 
-// --- Filter Movies by category + search ---
+// --- Filter and Render ---
 function filterAndRender() {
-  let filteredMovies = allMovies;
+  let filtered = allContents;
 
+  // Filter by category
   if (activeCategory !== "all") {
-    filteredMovies = filteredMovies.filter((movie) =>
-      movie.category
-        ?.split(",")
-        .map((cat) => cat.trim())
-        .includes(activeCategory)
-    );
+    filtered = filtered.filter((item) => {
+      const cats = item.category?.split(",").map((c) => c.trim()) || [];
+      return cats.includes(activeCategory);
+    });
   }
 
-  if (searchQuery.trim() !== "") {
+  // Filter by search
+  if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
-    filteredMovies = filteredMovies.filter((movie) =>
-      (movie.title || "").toLowerCase().includes(q)
+    filtered = filtered.filter((item) => 
+      (item.title || "").toLowerCase().includes(q)
     );
   }
 
-  renderMovies(filteredMovies);
+  renderGrid(filtered);
 }
 
-// --- Render Movie Grid ---
-function renderMovies(movies) {
+// --- Render Content Grid ---
+function renderGrid(contents) {
   if (!movieGrid) return;
 
   movieGrid.innerHTML = "";
 
-  if (!movies || movies.length === 0) {
-    movieGrid.innerHTML =
-      '<p class="no-results">هیچ محتوایی یافت نشد.</p>';
+  if (!contents || contents.length === 0) {
+    movieGrid.innerHTML = '<p class="no-results">هیچ محتوایی یافت نشد</p>';
     return;
   }
 
-  movies.forEach((movie) => {
-    const card = createMovieCard(movie);
+  contents.forEach((item) => {
+    const card = createContentCard(item);
     movieGrid.appendChild(card);
   });
 }
 
-// --- Create Single Movie Card ---
-function createMovieCard(movie) {
-  const isFavorite = favorites.includes(movie.id);
-
-  const coverSrc =
-    movie.cover ||
-    movie.cover_url || // اگر در Supabase نام ستون cover_url باشد
-    "assets/default-cover.jpg";
-
+// --- Create Content Card ---
+function createContentCard(item) {
+  const isFav = favorites.includes(item.id);
+  
+  // استفاده از cover_url استاندارد
+  const coverUrl = item.cover_url || "assets/default-cover.jpg";
+  
+  // برچسب نوع محتوا
+  const typeLabel = item.type === "series" ? "سریال" : "فیلم";
+  
   const card = document.createElement("div");
-  card.classList.add("movie-card");
+  card.className = "movie-card";
+  card.dataset.id = item.id;
 
   card.innerHTML = `
-    <img src="${coverSrc}" alt="${movie.title}" class="movie-cover" loading="lazy">
-
-    <div class="card-info">
-      <h3>${movie.title}</h3>
-
-      <div class="movie-meta">
-        ${movie.year ? `<span>${movie.year}</span>` : ""}
-        ${movie.category ? `<span>${movie.category}</span>` : ""}
+    <div class="card-cover-wrapper">
+      <img src="${coverUrl}" alt="${item.title}" class="movie-cover" loading="lazy">
+      <div class="card-overlay">
+        <a href="details.html?id=${item.id}" class="play-icon">▶</a>
       </div>
-
-      <div class="card-buttons">
-        <a href="details.html?id=${movie.id}" class="play-btn">▶</a>
-        <button class="fav-btn ${isFavorite ? "active" : ""}" data-id="${movie.id}">❤</button>
+      ${item.type === "series" ? '<span class="type-badge">سریال</span>' : ""}
+    </div>
+    
+    <div class="card-info">
+      <h3 class="card-title">${item.title}</h3>
+      <div class="card-meta">
+        ${item.year ? `<span>${item.year}</span>` : ""}
+        ${item.category ? `<span>${item.category.split(",")[0]}</span>` : ""}
       </div>
     </div>
+    
+    <button class="fav-btn ${isFav ? "active" : ""}" data-id="${item.id}" title="علاقه‌مندی">
+      ❤
+    </button>
   `;
 
+  // Favorite toggle
   const favBtn = card.querySelector(".fav-btn");
   favBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    toggleFavorite(movie.id);
+    toggleFavorite(item.id);
     favBtn.classList.toggle("active");
   });
 
-  card.addEventListener("click", () => {
-    window.location.href = `details.html?id=${movie.id}`;
+  // Click on card goes to details
+  card.addEventListener("click", (e) => {
+    if (!e.target.closest(".fav-btn")) {
+      window.location.href = `details.html?id=${item.id}`;
+    }
   });
 
   return card;
 }
 
-// --- Toggle Favorites ---
+// --- Toggle Favorite ---
 function toggleFavorite(id) {
-  if (favorites.includes(id)) {
-    favorites = favorites.filter((fav) => fav !== id);
+  const index = favorites.indexOf(id);
+  
+  if (index > -1) {
+    favorites.splice(index, 1);
   } else {
     favorites.push(id);
   }
+  
   localStorage.setItem("remo_favorites", JSON.stringify(favorites));
 }
 
-// --- Render Continue Watching Section ---
-function renderContinueWatching(movies) {
+// --- Render Continue Watching ---
+function renderContinueWatching() {
   if (!continueSection || !continueGrid) return;
 
-  const continueRaw = localStorage.getItem("continueWatching");
+  const continueRaw = localStorage.getItem("remo_continue");
   const continueList = continueRaw ? JSON.parse(continueRaw) : [];
 
   continueGrid.innerHTML = "";
@@ -198,72 +224,92 @@ function renderContinueWatching(movies) {
     return;
   }
 
+  // Map for quick lookup
   const continueMap = new Map();
   continueList.forEach((item) => {
-    if (item && item.id != null) {
-      continueMap.set(item.id, item);
-    }
+    if (item?.id) continueMap.set(item.id, item);
   });
 
-  let hasContinueItems = false;
+  const continueItems = [];
 
-  movies.forEach((movie) => {
-    const state = continueMap.get(movie.id);
+  allContents.forEach((item) => {
+    const state = continueMap.get(item.id);
     if (!state) return;
 
-    hasContinueItems = true;
-
-    const label = movie.type === "series" ? "ادامه سریال" : "ادامه فیلم";
-
-    const coverSrc =
-      movie.cover ||
-      movie.cover_url ||
-      "assets/default-cover.jpg";
-
-    const card = document.createElement("div");
-    card.classList.add("continue-card");
-
-    card.innerHTML = `
-      <img src="${coverSrc}" alt="${movie.title}" class="continue-thumb" loading="lazy">
-
-      <div class="continue-info">
-        <div>
-          <div class="continue-info-title">${movie.title}</div>
-          <div class="continue-info-meta">
-            ${movie.year ? movie.year + " • " : ""}${movie.category || ""}
-          </div>
-        </div>
-        <a href="details.html?id=${movie.id}" class="play-btn">
-          ${label}
-        </a>
-      </div>
-    `;
-
-    card.addEventListener("click", () => {
-      window.location.href = `details.html?id=${movie.id}`;
-    });
-
-    continueGrid.appendChild(card);
+    continueItems.push({ item, state });
   });
 
-  if (hasContinueItems) {
-    continueSection.classList.remove("hidden");
-    continueSection.style.display = "block";
-  } else {
+  if (continueItems.length === 0) {
     continueSection.classList.add("hidden");
     continueSection.style.display = "none";
+    return;
   }
+
+  continueSection.classList.remove("hidden");
+  continueSection.style.display = "block";
+
+  continueItems.forEach(({ item, state }) => {
+    const card = createContinueCard(item, state);
+    continueGrid.appendChild(card);
+  });
 }
 
-// --- Search Input Listener ---
+// --- Create Continue Watching Card ---
+function createContinueCard(item, state) {
+  const coverUrl = item.cover_url || "assets/default-cover.jpg";
+  
+  // Progress bar
+  const progress = state.progress || 0;
+  
+  // Label based on content type
+  let label = "ادامه تماشا";
+  if (item.type === "series" && state.season && state.episode) {
+    label = `فصل ${state.season} قسمت ${state.episode}`;
+  }
+
+  const card = document.createElement("div");
+  card.className = "continue-card";
+
+  card.innerHTML = `
+    <div class="continue-thumb-wrapper">
+      <img src="${coverUrl}" alt="${item.title}" class="continue-thumb" loading="lazy">
+      <div class="continue-overlay">
+        <span class="continue-play">▶</span>
+      </div>
+      <div class="continue-progress">
+        <div class="progress-bar" style="width: ${progress}%"></div>
+      </div>
+    </div>
+    
+    <div class="continue-info">
+      <h4 class="continue-title">${item.title}</h4>
+      <span class="continue-label">${label}</span>
+    </div>
+  `;
+
+  // Click goes to player directly
+  card.addEventListener("click", () => {
+    const params = new URLSearchParams();
+    params.set("id", item.id);
+    
+    if (item.type === "series" && state.season && state.episode) {
+      params.set("s", state.season);
+      params.set("e", state.episode);
+    }
+    
+    window.location.href = `player.html?${params.toString()}`;
+  });
+
+  return card;
+}
+
+// --- Search Handler ---
 if (searchInput) {
-  searchInput.addEventListener("input", (event) => {
-    searchQuery = event.target.value;
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value;
     filterAndRender();
   });
 }
 
-// --- Initial Load ---
-document.addEventListener("DOMContentLoaded", () => {
-  loadMovies();
-});
+// --- Init ---
+document.addEventListener("DOMContentLoaded", loadContents);
