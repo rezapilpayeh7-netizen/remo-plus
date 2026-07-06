@@ -1,21 +1,25 @@
-// --- Import Supabase ---
+// ============================================
+// REMO+ - player.js (نسخه نهایی با CORS اصلاح شده)
+// ============================================
+
 import supabase from "./supabase-config.js";
 
 // --- DOM Elements ---
-// توجه: این‌ها بر اساس player.html فعلی تو هستند
-const videoElement      = document.getElementById("video-player");
-const subtitleTrack     = document.getElementById("subtitleTrack"); // اگر بعداً اضافه کردی
+const videoElement = document.getElementById("video-player");
+const subtitleTrack = document.getElementById("subtitleTrack");
+const playerTitle = document.getElementById("movie-title");
+const playerMeta = document.getElementById("movie-description");
+const downloadButton = document.getElementById("download-btn");
 
-const playerTitle       = document.getElementById("movie-title");
-const playerMeta        = document.getElementById("movie-description");
-const downloadButton    = document.getElementById("download-btn");
-
-// اگر بعداً سریال UI اضافه کنی:
-const episodeList    = document.getElementById("episodeList");
-const seasonSelector = document.getElementById("seasonSelector");
-
-// --- localStorage keys ---
+// --- Constants ---
 const CONTINUE_KEY = "remo_continue";
+const PROGRESS_SAVE_INTERVAL = 5;
+
+// --- State ---
+let currentContent = null;
+let currentSeasonNumber = null;
+let currentEpisodeNumber = null;
+let subtitleBlobUrl = null; // برای cleanup
 
 // --- Helpers ---
 
@@ -23,28 +27,21 @@ function getParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-// id محتوا و پارامتر فصل/قسمت
 function getContentParams() {
   const id = getParam("id");
-  const s  = getParam("s");
-  const e  = getParam("e");
-
+  const s = getParam("s");
+  const e = getParam("e");
   return {
     id,
-    seasonNumber: s ? parseInt(s, 10) : null,
-    episodeNumber: e ? parseInt(e, 10) : null,
+    season: s ? parseInt(s, 10) : null,
+    episode: e ? parseInt(e, 10) : null
   };
 }
 
-// continue-watching
 function getContinueList() {
-  const raw = localStorage.getItem(CONTINUE_KEY);
-  if (!raw) return [];
   try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch (err) {
-    console.error("خطا در parse remo_continue:", err);
+    return JSON.parse(localStorage.getItem(CONTINUE_KEY)) || [];
+  } catch {
     return [];
   }
 }
@@ -53,57 +50,51 @@ function setContinueList(list) {
   localStorage.setItem(CONTINUE_KEY, JSON.stringify(list));
 }
 
-// ذخیره وضعیت پخش
 function saveContinueState({ id, type, season, episode, position, duration }) {
   const list = getContinueList();
-  const idx = list.findIndex(
-    (item) =>
-      String(item.id) === String(id) &&
-      (type === "movie" ||
-        (type === "series" &&
-          item.season === season &&
-          item.episode === episode))
+  const idx = list.findIndex(item => 
+    String(item.id) === String(id) &&
+    (type === "movie" || (type === "series" && item.season === season && item.episode === episode))
   );
 
   const payload = {
-    id,
-    type,
-    season: type === "series" ? season : null,
-    episode: type === "series" ? episode : null,
-    position,
-    duration,
+    id, type, season, episode, position, duration,
+    progress: duration > 0 ? Math.round((position / duration) * 100) : 0,
     updatedAt: Date.now()
   };
 
-  if (idx >= 0) {
-    list[idx] = payload;
-  } else {
-    list.push(payload);
-  }
-
+  if (idx >= 0) list[idx] = payload;
+  else list.push(payload);
+  
   setContinueList(list);
 }
 
-// --- Main initialize ---
-let currentContent = null;
-let currentSeasonNumber = null;
-let currentEpisodeNumber = null;
+function formatTime(sec) {
+  if (!sec || isNaN(sec)) return "00:00";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  return h > 0 
+    ? `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+    : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+// --- Main Initialization ---
 
 async function initializePlayer() {
   if (!videoElement) {
-    console.error("videoElement پیدا نشد؛ id باید 'video-player' باشد.");
+    console.error("❌ video-player element not found");
     return;
   }
 
-  const { id, seasonNumber, episodeNumber } = getContentParams();
-
+  const { id, season, episode } = getContentParams();
   if (!id) {
-    console.error("شناسه محتوا در URL یافت نشد.");
+    console.error("❌ Content ID not found in URL");
     return;
   }
 
-  // دریافت محتوا از Supabase
-  let content;
+  console.log("🎬 Loading content:", id);
+
   try {
     const { data, error } = await supabase
       .from("contents")
@@ -111,109 +102,75 @@ async function initializePlayer() {
       .eq("id", id)
       .single();
 
-    if (error) {
-      console.error("خطا در دریافت محتوا از Supabase:", error);
-      return;
+    if (error) throw error;
+    if (!data) throw new Error("Content not found");
+
+    currentContent = data;
+    console.log("✅ Content loaded:", data.title);
+    console.log("📝 Subtitle URL:", data.subtitle_url);
+
+    setupHeader(data);
+
+    if (data.type === "movie") {
+      await setupMovie(data);
+    } else if (data.type === "series") {
+      await setupSeries(data, season, episode);
     }
 
-    content = data;
+    setupControls();
 
-    // دیباگ دیتای اصلی محتوا
-    window.debugData = content;
-    console.log("دیتا لود شد:", content);
   } catch (err) {
-    console.error("خطا در ارتباط با Supabase در player.js:", err);
-    return;
+    console.error("❌ Failed to load content:", err);
   }
-
-  if (!content) {
-    console.error("محتوا یافت نشد");
-    return;
-  }
-
-  currentContent = content;
-
-  // رندر UI عمومی
-  setupPlayerHeader(content);
-
-  if (content.type === "movie") {
-    setupMoviePlayer(content);
-  } else if (content.type === "series") {
-    setupSeriesPlayer(content, seasonNumber, episodeNumber);
-  } else {
-    console.warn("نوع محتوا نامعتبر است:", content.type);
-  }
-
-  // کنترل‌های سفارشی (play/pause، progress bar، subtitle toggle، fullscreen)
-  setupCustomControls();
 }
 
-// --- Header / Info ---
+// --- Header Setup ---
 
-function setupPlayerHeader(content) {
-  if (playerTitle) {
-    playerTitle.textContent = content.title || "بدون عنوان";
-  }
-
+function setupHeader(content) {
+  if (playerTitle) playerTitle.textContent = content.title || "بدون عنوان";
+  
   if (playerMeta) {
     const parts = [];
     if (content.year) parts.push(content.year);
     if (content.category) parts.push(content.category);
-    if (content.type === "series") parts.push("سریال");
-    if (content.type === "movie") parts.push("فیلم");
+    parts.push(content.type === "series" ? "سریال" : "فیلم");
     playerMeta.textContent = parts.join(" • ");
   }
 
-  // دکمه دانلود عمومی (برای فیلم؛ برای سریال در loadEpisode override می‌شود)
   if (downloadButton) {
-    if (content.download) {
-      downloadButton.href = content.download;
-      downloadButton.style.display = "inline-flex";
-    } else {
-      downloadButton.style.display = "none";
-    }
+    const dlUrl = content.download_url || content.download;
+    downloadButton.href = dlUrl || "#";
+    downloadButton.style.display = dlUrl ? "inline-flex" : "none";
   }
 }
 
 // --- Movie Player ---
 
-function setupMoviePlayer(content) {
-  const cwList = getContinueList();
-  const cw = cwList.find(
-    (item) => String(item.id) === String(content.id) && item.type === "movie"
+async function setupMovie(content) {
+  const cw = getContinueList().find(item => 
+    String(item.id) === String(content.id) && item.type === "movie"
   );
 
-  const streamUrl    = content.stream;
-  const subtitleUrl  = content.subtitle;
+  const streamUrl = content.stream_url || content.stream;
+  const subtitleUrl = content.subtitle_url || content.subtitle;
+
+  console.log("🎥 Stream URL:", streamUrl);
+  console.log("📝 Subtitle URL:", subtitleUrl);
 
   if (!streamUrl) {
-    console.warn("لینک پخش برای فیلم موجود نیست.");
+    console.warn("⚠️ No stream URL for movie");
     return;
   }
 
-  // زیرنویس
-  setupSubtitleTrack(subtitleUrl);
-
-  // پخش استریم با HLS/mp4
+  await setupSubtitle(subtitleUrl);
   playStream(streamUrl);
 
-  // ادامه تماشا
-  if (
-    cw &&
-    typeof cw.position === "number" &&
-    cw.position > 0 &&
-    videoElement
-  ) {
-    // صبر کن تا متادیتا لود شود
-    videoElement.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (cw.position < videoElement.duration) {
-          videoElement.currentTime = cw.position;
-        }
-      },
-      { once: true }
-    );
+  if (cw?.position > 0) {
+    videoElement.addEventListener("loadedmetadata", () => {
+      if (cw.position < videoElement.duration - 10) {
+        videoElement.currentTime = cw.position;
+      }
+    }, { once: true });
   }
 
   bindTimeUpdate(content, "movie");
@@ -221,241 +178,262 @@ function setupMoviePlayer(content) {
 
 // --- Series Player ---
 
-function setupSeriesPlayer(content, requestedSeason, requestedEpisode) {
+async function setupSeries(content, requestedSeason, requestedEpisode) {
   if (!Array.isArray(content.seasons) || content.seasons.length === 0) {
-    console.warn("هیچ فصلی برای این سریال ثبت نشده است.");
+    console.warn("⚠️ No seasons available");
     return;
   }
 
-  // فصل/قسمت هدف
-  let seasonNumber = requestedSeason || 1;
-  let episodeNumber = requestedEpisode || 1;
-
-  const cwList = getContinueList();
-  const cwState = cwList.find(
-    (item) => String(item.id) === String(content.id) && item.type === "series"
+  const cw = getContinueList().find(item => 
+    String(item.id) === String(content.id) && item.type === "series"
   );
 
-  // اگر URL چیزی نگفته و continue داریم، از آن استفاده کن
-  if (!requestedSeason && !requestedEpisode && cwState) {
-    if (cwState.season) seasonNumber = cwState.season;
-    if (cwState.episode) episodeNumber = cwState.episode;
+  let seasonNum = requestedSeason || 1;
+  let episodeNum = requestedEpisode || 1;
+
+  if (!requestedSeason && !requestedEpisode && cw?.season && cw?.episode) {
+    seasonNum = cw.season;
+    episodeNum = cw.episode;
   }
 
-  currentSeasonNumber  = seasonNumber;
-  currentEpisodeNumber = episodeNumber;
-
-  // انتخاب اپیزود
-  const { season, episode } = findEpisode(content, seasonNumber, episodeNumber);
-  if (!season || !episode) {
-    console.warn("اپیزود مورد نظر یافت نشد.");
+  const result = findEpisode(content, seasonNum, episodeNum);
+  if (!result.season || !result.episode) {
+    console.warn("⚠️ Episode not found");
     return;
   }
 
-  // اگر UI سیزن/اپیزود داری، بعداً این‌ها را اینجا رندر کن
-  // renderSeasonSelector(content, seasonNumber);
-  // renderEpisodesList(content, seasonNumber, episodeNumber);
-
-  loadEpisode(content, season, episode, cwState);
+  await loadEpisode(content, result.season, result.episode, cw);
 }
 
-// پیدا کردن فصل/قسمت بر اساس schema استاندارد seasons
-function findEpisode(content, seasonNumber, episodeNumber) {
-  const season = content.seasons.find(
-    (s) => s.season_number === seasonNumber
-  );
-  if (!season || !Array.isArray(season.episodes)) {
-    return { season: null, episode: null };
-  }
-
-  const episode = season.episodes.find(
-    (ep) => ep.episode_number === episodeNumber
-  );
-
+function findEpisode(content, seasonNum, episodeNum) {
+  const season = content.seasons.find(s => s.season_number === seasonNum);
+  if (!season?.episodes) return { season: null, episode: null };
+  
+  const episode = season.episodes.find(ep => ep.episode_number === episodeNum);
   return { season, episode };
 }
 
-// بارگذاری اپیزود در پلیر
-function loadEpisode(content, season, episode, cwState) {
-  if (!videoElement) return;
-
-  const streamUrl   = episode.stream;
-  const subtitleUrl = episode.subtitle || content.subtitle;
+async function loadEpisode(content, season, episode, cwState) {
+  const streamUrl = episode.stream_url;
+  const subtitleUrl = episode.subtitle_url || content.subtitle_url || content.subtitle;
 
   if (!streamUrl) {
-    console.warn("لینک stream برای این اپیزود تعریف نشده.");
+    console.warn("⚠️ No stream URL for episode");
     return;
   }
 
-  currentSeasonNumber  = season.season_number;
+  currentSeasonNumber = season.season_number;
   currentEpisodeNumber = episode.episode_number;
 
-  // زیرنویس
-  setupSubtitleTrack(subtitleUrl);
-
-  // پخش استریم
-  playStream(streamUrl);
-
-  // آپدیت عنوان
   if (playerTitle) {
     playerTitle.textContent = `${content.title} - فصل ${season.season_number} قسمت ${episode.episode_number}`;
   }
 
-  // دانلود
   if (downloadButton) {
-    if (episode.download) {
-      downloadButton.href = episode.download;
-      downloadButton.style.display = "inline-flex";
-    } else {
-      downloadButton.style.display = "none";
-    }
+    const epDl = episode.download_url || episode.download;
+    downloadButton.href = epDl || "#";
+    downloadButton.style.display = epDl ? "inline-flex" : "none";
   }
 
-  // continue position
-  if (
-    cwState &&
-    cwState.season === season.season_number &&
-    cwState.episode === episode.episode_number &&
-    typeof cwState.position === "number" &&
-    cwState.position > 0
-  ) {
-    videoElement.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (cwState.position < videoElement.duration) {
-          videoElement.currentTime = cwState.position;
-        }
-      },
-      { once: true }
-    );
+  await setupSubtitle(subtitleUrl);
+  playStream(streamUrl);
+
+  const isSameEpisode = cwState?.season === season.season_number && 
+                        cwState?.episode === episode.episode_number;
+  
+  if (isSameEpisode && cwState?.position > 0) {
+    videoElement.addEventListener("loadedmetadata", () => {
+      if (cwState.position < videoElement.duration - 10) {
+        videoElement.currentTime = cwState.position;
+      }
+    }, { once: true });
   }
 
   bindTimeUpdate(content, "series", {
-    seasonNumber: season.season_number,
-    episodeNumber: episode.episode_number,
+    season: season.season_number,
+    episode: episode.episode_number
   });
 
-  // URL را آپدیت کن (برای share لینک اپیزود)
+  // Update URL
   const url = new URL(window.location.href);
   url.searchParams.set("s", season.season_number);
   url.searchParams.set("e", episode.episode_number);
-  window.history.replaceState({}, "", url.toString());
+  window.history.replaceState({}, "", url);
 }
 
-// --- Subtitle ---
+// --- Subtitle Setup (اصلاح شده برای CORS) ---
 
-function setupSubtitleTrack(subtitleUrl) {
-  // الان در HTML track نداریم؛ اگر بعداً اضافه کردی، این بخش فعال می‌شود.
-  if (!subtitleTrack) return;
+async function setupSubtitle(url) {
+  console.log("🎯 setupSubtitle called with:", url);
 
-  if (subtitleUrl) {
-    subtitleTrack.src = subtitleUrl;
-    subtitleTrack.label = "فارسی";
-    subtitleTrack.kind = "subtitles";
-    subtitleTrack.default = true;
-    subtitleTrack.mode = "showing";
-  } else {
+  if (!subtitleTrack) {
+    console.error("❌ subtitleTrack element not found");
+    return;
+  }
+
+  // Cleanup قبلی
+  if (subtitleBlobUrl) {
+    URL.revokeObjectURL(subtitleBlobUrl);
+    subtitleBlobUrl = null;
+  }
+
+  if (!url) {
+    console.log("ℹ️ No subtitle URL provided");
     subtitleTrack.src = "";
     subtitleTrack.mode = "disabled";
+    return;
+  }
+
+  try {
+    // تست CORS با fetch
+    console.log("🧪 Testing CORS...");
+    const response = await fetch(url, { 
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'text/vtt,text/plain,*/*'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const vttText = await response.text();
+    console.log("✅ CORS OK, VTT loaded, size:", vttText.length);
+
+    // تبدیل به Blob و Object URL
+    const blob = new Blob([vttText], { type: 'text/vtt' });
+    subtitleBlobUrl = URL.createObjectURL(blob);
+
+    // تنظیم track
+    subtitleTrack.src = subtitleBlobUrl;
+    subtitleTrack.label = "فارسی";
+    subtitleTrack.kind = "subtitles";
+    subtitleTrack.srclang = "fa";
+    subtitleTrack.default = true;
+    
+    // فعال کردن با تاخیر کوتاه
+    setTimeout(() => {
+      subtitleTrack.mode = "showing";
+      console.log("✅ Subtitle enabled, mode:", subtitleTrack.mode);
+    }, 100);
+
+    // Event listeners
+    subtitleTrack.onerror = (e) => console.error("❌ Track error:", e);
+    subtitleTrack.onload = () => console.log("✅ Track loaded");
+
+  } catch (err) {
+    console.error("❌ CORS/Load error:", err.message);
+    
+    // Fallback: تلاش مستقیم (اگه CORS تنظیم شده باشه کار می‌کنه)
+    console.log("🔄 Trying direct load...");
+    subtitleTrack.src = url;
+    subtitleTrack.label = "فارسی";
+    subtitleTrack.kind = "subtitles";
+    subtitleTrack.srclang = "fa";
+    subtitleTrack.default = true;
+    subtitleTrack.mode = "showing";
   }
 }
 
-// --- HLS/mp4 playback ---
+// --- Stream Playback ---
 
 function playStream(url) {
-  if (!url) {
-    console.error("No stream URL provided!");
-    return;
+  if (!url) return;
+
+  console.log("▶️ Playing stream:", url);
+
+  // Cleanup HLS قبلی
+  if (window.hlsPlayer) {
+    window.hlsPlayer.destroy();
+    window.hlsPlayer = null;
   }
 
   const video = videoElement;
 
-  // اگر HLS (m3u8)
   if (url.includes(".m3u8")) {
-    if (window.Hls && window.Hls.isSupported()) {
-      const hls = new Hls();
-      window.hlsPlayer = hls; // برای دیباگ
+    if (window.Hls?.isSupported()) {
+      const hls = new window.Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        debug: false
+      });
+      window.hlsPlayer = hls;
 
       hls.loadSource(url);
       hls.attachMedia(video);
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(err => {
-          console.warn("Autoplay blocked:", err);
-        });
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(err => console.warn("Autoplay blocked:", err));
       });
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error("HLS error:", data);
+      hls.on(window.Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error("HLS fatal error:", data);
+          hls.destroy();
+        }
       });
+
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = url;
       video.play().catch(err => console.warn("Autoplay blocked:", err));
     } else {
-      console.error("HLS not supported in this browser.");
-      // fallback: شاید backend لینک دیگری بده
+      console.error("HLS not supported");
       video.src = url;
-      video.play().catch(err => console.warn("Autoplay blocked:", err));
     }
   } else {
-    // mp4 و سایر فرمت‌ها
     video.src = url;
     video.play().catch(err => console.warn("Autoplay blocked:", err));
   }
 }
 
-// --- Timeupdate binding ---
+// --- Time Update & Progress Save ---
 
 function bindTimeUpdate(content, type, extra = {}) {
   if (!videoElement) return;
 
-  // برای اینکه event listener چندباره اضافه نشود:
-  videoElement.onpause      = null;
-  videoElement.ontimeupdate = null;
-  videoElement.onended      = null;
+  let lastSave = 0;
 
   const save = () => {
-    if (!videoElement || !videoElement.duration) return;
+    if (!videoElement.duration) return;
+    
     const position = videoElement.currentTime;
     const duration = videoElement.duration;
 
-    // اگر خیلی کم پخش شده، ذخیره نکن
-    if (position < 5) return;
+    if (position < 5 || position > duration - 5) return;
 
     saveContinueState({
       id: content.id,
       type,
-      season: extra.seasonNumber || currentSeasonNumber || null,
-      episode: extra.episodeNumber || currentEpisodeNumber || null,
+      season: extra.season || currentSeasonNumber,
+      episode: extra.episode || currentEpisodeNumber,
       position,
-      duration,
+      duration
     });
   };
 
   videoElement.ontimeupdate = () => {
-    if (Math.floor(videoElement.currentTime) % 5 === 0) {
+    const currentSec = Math.floor(videoElement.currentTime);
+    if (currentSec % PROGRESS_SAVE_INTERVAL === 0 && currentSec !== lastSave) {
+      lastSave = currentSec;
       save();
     }
   };
 
-  videoElement.onpause = () => {
-    save();
-  };
-
-  videoElement.onended = () => {
-    save();
-  };
+  videoElement.onpause = save;
+  videoElement.onended = save;
 }
 
-// --- Custom Controls (play/pause, progress, subtitles toggle, fullscreen) ---
+// --- Custom Controls ---
 
-function setupCustomControls() {
-  const playPauseBtn  = document.getElementById("play-pause");
-  const timeDisplay   = document.getElementById("time-display");
-  const progressBar   = document.getElementById("progress-bar");
-  const progressFilled= document.getElementById("progress-filled");
-  const subBtn        = document.getElementById("sub-btn");
-  const fsBtn         = document.getElementById("fs-btn");
+function setupControls() {
+  const playPauseBtn = document.getElementById("play-pause");
+  const timeDisplay = document.getElementById("time-display");
+  const progressBar = document.getElementById("progress-bar");
+  const progressFilled = document.getElementById("progress-filled");
+  const subBtn = document.getElementById("sub-btn");
+  const fsBtn = document.getElementById("fs-btn");
   const playerWrapper = document.getElementById("player-wrapper");
 
   if (!videoElement) return;
@@ -463,98 +441,70 @@ function setupCustomControls() {
   // Play/Pause
   if (playPauseBtn) {
     playPauseBtn.addEventListener("click", () => {
-      if (videoElement.paused) {
-        videoElement.play().catch(err => console.warn("Autoplay blocked:", err));
-        playPauseBtn.textContent = "⏸";
-      } else {
-        videoElement.pause();
-        playPauseBtn.textContent = "▶";
-      }
+      videoElement.paused ? videoElement.play() : videoElement.pause();
     });
 
-    videoElement.addEventListener("play", () => {
-      playPauseBtn.textContent = "⏸";
-    });
-
-    videoElement.addEventListener("pause", () => {
-      playPauseBtn.textContent = "▶";
-    });
+    videoElement.addEventListener("play", () => playPauseBtn.textContent = "⏸");
+    videoElement.addEventListener("pause", () => playPauseBtn.textContent = "▶");
   }
 
-  // Time display + progress
+  // Time & Progress
   if (timeDisplay || progressFilled) {
     videoElement.addEventListener("timeupdate", () => {
       const current = formatTime(videoElement.currentTime);
-      const total   = formatTime(videoElement.duration || 0);
-      if (timeDisplay) {
-        timeDisplay.textContent = `${current} / ${total}`;
-      }
+      const total = formatTime(videoElement.duration || 0);
 
+      if (timeDisplay) timeDisplay.textContent = `${current} / ${total}`;
+      
       if (progressFilled && videoElement.duration) {
-        const percent = (videoElement.currentTime / videoElement.duration) * 100;
-        progressFilled.style.width = `${percent}%`;
+        const pct = (videoElement.currentTime / videoElement.duration) * 100;
+        progressFilled.style.width = `${pct}%`;
       }
     });
   }
 
-  // Seek by clicking progress bar
+  // Seek
   if (progressBar) {
     progressBar.addEventListener("click", (e) => {
       const rect = progressBar.getBoundingClientRect();
-      const x    = e.clientX - rect.left;
-      const ratio= x / rect.width;
+      const ratio = (e.clientX - rect.left) / rect.width;
       if (videoElement.duration) {
         videoElement.currentTime = ratio * videoElement.duration;
       }
     });
   }
 
-  // Subtitle toggle (اگر track داریم)
+  // Subtitle Toggle
   if (subBtn && subtitleTrack) {
     subBtn.addEventListener("click", () => {
-      const isOn = subtitleTrack.mode === "showing";
-      if (isOn) {
-        subtitleTrack.mode = "disabled";
-        subBtn.classList.remove("active");
-        subBtn.classList.add("off");
-      } else {
-        subtitleTrack.mode = "showing";
-        subBtn.classList.add("active");
-        subBtn.classList.remove("off");
-      }
+      const isShowing = subtitleTrack.mode === "showing";
+      subtitleTrack.mode = isShowing ? "disabled" : "showing";
+      subBtn.classList.toggle("active", !isShowing);
+      console.log("Subtitle mode:", subtitleTrack.mode);
     });
   }
 
   // Fullscreen
   if (fsBtn && playerWrapper) {
     fsBtn.addEventListener("click", () => {
-      const isFs = document.fullscreenElement === playerWrapper;
-      if (isFs) {
-        document.exitFullscreen?.();
-        playerWrapper.classList.remove("player-fullscreen");
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
       } else {
-        playerWrapper.requestFullscreen?.();
-        playerWrapper.classList.add("player-fullscreen");
-      }
-    });
-
-    document.addEventListener("fullscreenchange", () => {
-      const isFs = document.fullscreenElement === playerWrapper;
-      if (!isFs) {
-        playerWrapper.classList.remove("player-fullscreen");
+        playerWrapper.requestFullscreen();
       }
     });
   }
 }
 
-function formatTime(sec) {
-  if (!sec || isNaN(sec)) return "00:00";
-  const s = Math.floor(sec % 60);
-  const m = Math.floor(sec / 60);
-  const mm = m.toString().padStart(2, "0");
-  const ss = s.toString().padStart(2, "0");
-  return `${mm}:${ss}`;
-}
+// --- Cleanup on page unload ---
+window.addEventListener("beforeunload", () => {
+  if (subtitleBlobUrl) {
+    URL.revokeObjectURL(subtitleBlobUrl);
+  }
+  if (window.hlsPlayer) {
+    window.hlsPlayer.destroy();
+  }
+});
 
-// --- Start ---
+// --- Init ---
 document.addEventListener("DOMContentLoaded", initializePlayer);
