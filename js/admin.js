@@ -1,11 +1,11 @@
-// =============================
-// import Supabase
-// =============================
+// ============================================
+// REMO+ - admin.js (اصلاح شده)
+// داشبورد مدیریت - افزودن/ویرایش محتوا با اسکیمای استاندارد
+// ============================================
+
 import supabase from "./supabase-config.js";
 
-// =============================
-// المان‌های DOM
-// =============================
+// --- DOM Elements ---
 const form = document.getElementById("movie-form");
 const adminList = document.getElementById("movie-list-container");
 const submitBtn = document.getElementById("submit-btn");
@@ -18,95 +18,84 @@ const seriesSection = document.getElementById("series-section");
 const seasonsContainer = document.getElementById("seasons-container");
 const addSeasonBtn = document.getElementById("add-season-btn");
 
-// فیلد فایل زیرنویس فیلم (اگر در DOM وجود داشته باشد)
 const subtitleFileInput = document.getElementById("sub-file");
 
 let editMode = null;
 
-// =============================
-// UID – در Supabase می‌تونی بی‌نیاز باشی، ولی برای سازگاری نگه می‌داریم
-// =============================
+// --- Schema Standard ---
+// استاندارد فیلدهای رکورد content:
+// id, title, type, year, category, description,
+// cover_url, stream_url, download_url, subtitle_url,
+// seasons (JSON برای سریال)
+//
+// ساختار فصل:
+// { season_number: number, title: string, episodes: [...] }
+//
+// ساختار قسمت:
+// { episode_number: number, title: string, duration: string, 
+//   thumbnail_url: string, stream_url: string, subtitle_url: string }
+
+// --- Helpers ---
+
 function uid() {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
 }
 
-// =============================
-// دریافت داده‌ها از Supabase (به‌جای localStorage)
-// =============================
-async function getMovies() {
+async function getContents() {
   try {
     const { data, error } = await supabase
       .from("contents")
       .select("*")
-      .order("id", { ascending: true });
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("خطا در خواندن از Supabase:", error);
-      return [];
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error("خطای غیرمنتظره در getMovies:", err);
+    console.error("Error loading contents:", err);
     return [];
   }
 }
 
-// =============================
-// گرفتن URL زیرنویس فیلم (لینک دستی + آپلود فایل)
-// =============================
-async function getMovieSubtitleUrl() {
-  const subtitleInputEl = document.getElementById("subtitle");
-  const subtitleFileInputEl = subtitleFileInput;
+// --- Subtitle Upload (VTT only) ---
 
-  // لینک دستی اولیه
-  let subtitleUrl =
-    subtitleInputEl && subtitleInputEl.value
-      ? subtitleInputEl.value.trim()
-      : "";
+async function uploadSubtitle(fileInput) {
+  if (!fileInput?.files?.[0]) return null;
 
-  // اگر فایل انتخاب شده بود، آپلود کنیم و URL را جایگزین کنیم
-  if (
-    subtitleFileInputEl &&
-    subtitleFileInputEl.files &&
-    subtitleFileInputEl.files[0]
-  ) {
-    const file = subtitleFileInputEl.files[0];
-    const fileName = `${Date.now()}_${file.name}`;
+  const file = fileInput.files[0];
+  const fileNameLower = file.name.toLowerCase();
 
-    const { error } = await supabase.storage
-      .from("subtitles")
-      .upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type || "application/octet-stream",
-      });
-
-    if (error) {
-      console.error("خطا در آپلود زیرنویس فیلم:", error);
-      alert("خطا در آپلود زیرنویس فیلم");
-      // اگر آپلود fail شد، همان مقدار دستی (اگر هست) را نگه می‌داریم
-      return subtitleUrl;
-    }
-
-    const { data: publicUrlData, error: publicUrlError } = supabase.storage
-      .from("subtitles")
-      .getPublicUrl(fileName);
-
-    if (publicUrlError) {
-      console.error("خطا در گرفتن لینک عمومی زیرنویس فیلم:", publicUrlError);
-      return subtitleUrl;
-    }
-
-    subtitleUrl = publicUrlData.publicUrl;
+  if (!fileNameLower.endsWith(".vtt")) {
+    alert("فقط فایل .vtt مجاز است");
+    return null;
   }
 
-  return subtitleUrl;
+  const fileName = `subtitles/${uid()}_${file.name}`;
+
+  const { error } = await supabase.storage
+    .from("remo-assets")
+    .upload(fileName, file, {
+      cacheControl: "3600",
+      contentType: "text/vtt"
+    });
+
+  if (error) {
+    console.error("Upload error:", error);
+    alert("خطا در آپلود زیرنویس");
+    return null;
+  }
+
+  const { data } = supabase.storage.from("remo-assets").getPublicUrl(fileName);
+  return data.publicUrl;
 }
 
-// =============================
-// تنظیم حالت سریال / فیلم
-// =============================
+async function getMovieSubtitleUrl() {
+  const manualUrl = document.getElementById("subtitle")?.value.trim() || "";
+  const uploadedUrl = await uploadSubtitle(subtitleFileInput);
+  return uploadedUrl || manualUrl;
+}
+
+// --- Series Mode Toggle ---
+
 function setSeriesMode(isSeries) {
   if (!streamInput) return;
 
@@ -114,90 +103,52 @@ function setSeriesMode(isSeries) {
     streamInput.removeAttribute("required");
     streamInput.disabled = true;
     streamInput.value = "";
-
-    if (streamInput.parentElement) {
-      streamInput.parentElement.style.display = "none";
-    }
-
-    if (seriesSection) {
-      seriesSection.style.display = "block";
-    }
+    streamInput.closest(".form-group")?.classList.add("hidden");
+    seriesSection?.classList.remove("hidden");
   } else {
     streamInput.disabled = false;
     streamInput.setAttribute("required", "true");
-
-    if (streamInput.parentElement) {
-      streamInput.parentElement.style.display = "block";
-    }
-
-    if (seriesSection) {
-      seriesSection.style.display = "none";
-    }
+    streamInput.closest(".form-group")?.classList.remove("hidden");
+    seriesSection?.classList.add("hidden");
   }
 }
 
-// =============================
-// ساخت آیتم قسمت
-// =============================
+// --- Season/Episode Builders ---
+
 function createEpisodeItem(data = {}) {
   const wrap = document.createElement("div");
   wrap.className = "episode-item";
 
   wrap.innerHTML = `
     <div class="episode-box">
-      <input
-        type="text"
-        class="episode-title"
-        placeholder="عنوان قسمت"
-        value="${data.title || ""}"
-      >
-
-      <input
-        type="text"
-        class="episode-stream"
-        placeholder="لینک استریم"
-        value="${data.stream || ""}"
-      >
-
-      <input
-        type="text"
-        class="episode-download"
-        placeholder="لینک دانلود"
-        value="${data.download || ""}"
-      >
-
-      <input
-        type="text"
-        class="episode-subtitle"
-        placeholder="لینک زیرنویس"
-        value="${data.subtitle || ""}"
-      >
-
-      <div class="form-group" style="margin-top:6px;">
-        <label>آپلود زیرنویس قسمت</label>
-        <input type="file" class="episode-subfile" accept=".srt,.vtt">
+      <input type="number" class="ep-number" placeholder="شماره" 
+        value="${data.episode_number || ""}" min="1">
+      <input type="text" class="ep-title" placeholder="عنوان قسمت" 
+        value="${data.title || ""}">
+      <input type="text" class="ep-stream" placeholder="لینک استریم" 
+        value="${data.stream_url || ""}">
+      <input type="text" class="ep-download" placeholder="لینک دانلود" 
+        value="${data.download_url || ""}">
+      <input type="text" class="ep-subtitle" placeholder="لینک زیرنویس" 
+        value="${data.subtitle_url || ""}">
+      <input type="text" class="ep-duration" placeholder="مدت (دقیقه)" 
+        value="${data.duration || ""}">
+      <input type="text" class="ep-thumbnail" placeholder="لینک تصویر" 
+        value="${data.thumbnail_url || ""}">
+      
+      <div class="form-group file-upload">
+        <label>آپلود زیرنویس:</label>
+        <input type="file" class="ep-subfile" accept=".vtt">
       </div>
 
-      <button
-        type="button"
-        class="remove-episode-btn remove-btn"
-      >
-        حذف قسمت
-      </button>
+      <button type="button" class="remove-episode-btn remove-btn">حذف قسمت</button>
     </div>
   `;
 
-  const removeBtn = wrap.querySelector(".remove-episode-btn");
-  removeBtn.addEventListener("click", () => {
-    wrap.remove();
-  });
-
+  wrap.querySelector(".remove-episode-btn").addEventListener("click", () => wrap.remove());
   return wrap;
 }
 
-// =============================
-// ساخت فصل
-// =============================
 function createSeasonItem(data = {}) {
   const wrap = document.createElement("div");
   wrap.className = "season-item";
@@ -205,37 +156,21 @@ function createSeasonItem(data = {}) {
   wrap.innerHTML = `
     <div class="season-box">
       <div class="season-header">
-        <input
-          type="text"
-          class="season-title"
-          placeholder="عنوان فصل"
-          value="${data.title || ""}"
-        >
-
-        <button
-          type="button"
-          class="remove-season-btn remove-btn"
-        >
-          حذف فصل
-        </button>
+        <input type="number" class="season-number" placeholder="شماره فصل" 
+          value="${data.season_number || ""}" min="1">
+        <input type="text" class="season-title" placeholder="عنوان فصل" 
+          value="${data.title || ""}">
+        <button type="button" class="remove-season-btn remove-btn">حذف فصل</button>
       </div>
-
       <div class="episodes-container"></div>
-
-      <button
-        type="button"
-        class="add-episode-btn"
-      >
-        + افزودن قسمت
-      </button>
+      <button type="button" class="add-episode-btn">+ افزودن قسمت</button>
     </div>
   `;
 
   const episodesContainer = wrap.querySelector(".episodes-container");
   const addEpisodeBtn = wrap.querySelector(".add-episode-btn");
-  const removeSeasonBtn = wrap.querySelector(".remove-season-btn");
 
-  (data.episodes || []).forEach((ep) => {
+  (data.episodes || []).forEach(ep => {
     episodesContainer.appendChild(createEpisodeItem(ep));
   });
 
@@ -243,418 +178,277 @@ function createSeasonItem(data = {}) {
     episodesContainer.appendChild(createEpisodeItem());
   });
 
-  removeSeasonBtn.addEventListener("click", () => {
-    wrap.remove();
-  });
+  wrap.querySelector(".remove-season-btn").addEventListener("click", () => wrap.remove());
 
   return wrap;
 }
 
-// =============================
-// جمع‌آوری فصل‌ها از DOM + آپلود زیرنویس اپیزودها
-// =============================
+// --- Data Collection ---
+
 async function collectSeasonsData() {
   const seasons = [];
 
   const seasonEls = document.querySelectorAll(".season-item");
 
-  for (let sIndex = 0; sIndex < seasonEls.length; sIndex++) {
-    const seasonEl = seasonEls[sIndex];
+  for (const seasonEl of seasonEls) {
+    const seasonNumber = parseInt(seasonEl.querySelector(".season-number")?.value) || 1;
+    const seasonTitle = seasonEl.querySelector(".season-title")?.value.trim() || "";
+    
     const episodes = [];
-
     const episodeEls = seasonEl.querySelectorAll(".episode-item");
 
-    for (let eIndex = 0; eIndex < episodeEls.length; eIndex++) {
-      const epEl = episodeEls[eIndex];
-
-      const episodeTitle =
-        epEl.querySelector(".episode-title")?.value.trim() || "";
-      const episodeStream =
-        epEl.querySelector(".episode-stream")?.value.trim() || "";
-      const episodeDownload =
-        epEl.querySelector(".episode-download")?.value.trim() || "";
-      const episodeSubtitleField =
-        epEl.querySelector(".episode-subtitle")?.value.trim() || "";
-
-      const episodeSubtitleInput = epEl.querySelector(".episode-subfile");
-      let episodeSubtitleUrl = episodeSubtitleField;
-
-      // اگر فایل زیرنویس برای این اپیزود انتخاب شده بود
-      if (
-        episodeSubtitleInput &&
-        episodeSubtitleInput.files &&
-        episodeSubtitleInput.files[0]
-      ) {
-        const file = episodeSubtitleInput.files[0];
-        const fileName = `${Date.now()}_${file.name}`;
-
-        const { error } = await supabase.storage
-          .from("subtitles")
-          .upload(fileName, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || "application/octet-stream",
-          });
-
-        if (error) {
-          console.error(
-            "خطا در آپلود زیرنویس اپیزود:",
-            episodeTitle,
-            error
-          );
-          alert(
-            `خطا در آپلود زیرنویس قسمت "${episodeTitle || eIndex + 1}".`
-          );
-          // در صورت خطا، همان لینک دستی (اگر هست) را نگه می‌داریم
-        } else {
-          const { data: publicUrlData, error: publicUrlError } =
-            supabase.storage.from("subtitles").getPublicUrl(fileName);
-
-          if (publicUrlError) {
-            console.error(
-              "خطا در گرفتن لینک عمومی زیرنویس اپیزود:",
-              publicUrlError
-            );
-          } else {
-            episodeSubtitleUrl = publicUrlData.publicUrl;
-          }
-        }
-      }
+    for (const epEl of episodeEls) {
+      const fileInput = epEl.querySelector(".ep-subfile");
+      const uploadedSubtitle = await uploadSubtitle(fileInput);
 
       episodes.push({
-        episodeNumber: eIndex + 1,
-        title: episodeTitle,
-        stream: episodeStream,
-        download: episodeDownload,
-        subtitle: episodeSubtitleUrl,
+        episode_number: parseInt(epEl.querySelector(".ep-number")?.value) || episodes.length + 1,
+        title: epEl.querySelector(".ep-title")?.value.trim() || "",
+        stream_url: epEl.querySelector(".ep-stream")?.value.trim() || "",
+        download_url: epEl.querySelector(".ep-download")?.value.trim() || "",
+        subtitle_url: uploadedSubtitle || epEl.querySelector(".ep-subtitle")?.value.trim() || "",
+        duration: epEl.querySelector(".ep-duration")?.value.trim() || "",
+        thumbnail_url: epEl.querySelector(".ep-thumbnail")?.value.trim() || ""
       });
     }
 
     seasons.push({
-      seasonNumber: sIndex + 1,
-      title: seasonEl.querySelector(".season-title")?.value.trim() || "",
-      episodes,
+      season_number: seasonNumber,
+      title: seasonTitle,
+      episodes: episodes.sort((a, b) => a.episode_number - b.episode_number)
     });
   }
 
-  return seasons;
+  return seasons.sort((a, b) => a.season_number - b.season_number);
 }
 
-// =============================
-// جمع‌آوری داده‌های فرم
-// =============================
-function collectFormData(subtitleUrlFromSupabase = null) {
-  const type = typeSelect ? typeSelect.value : "movie";
+function collectFormData(subtitleUrl = "") {
+  const type = typeSelect?.value || "movie";
   const isSeries = type === "series";
-
-  const subtitleField =
-    document.getElementById("subtitle")?.value.trim() || "";
-
-  const subtitleValue = subtitleUrlFromSupabase || subtitleField;
 
   const data = {
     title: document.getElementById("title")?.value.trim() || "",
     year: document.getElementById("year")?.value.trim() || "",
     type,
     category: document.getElementById("category")?.value.trim() || "",
-    cover: document.getElementById("cover")?.value.trim() || "",
+    cover_url: document.getElementById("cover")?.value.trim() || "",
     description: document.getElementById("description")?.value.trim() || "",
-    download: document.getElementById("download")?.value.trim() || "",
-    subtitle: subtitleValue,
+    download_url: document.getElementById("download")?.value.trim() || "",
+    subtitle_url: subtitleUrl
   };
 
-  // فقط در حالت ویرایش اگر لازم بود id را نگه دار
-  if (editMode) {
-    data.id = editMode;
+  if (!isSeries) {
+    data.stream_url = document.getElementById("stream")?.value.trim() || "";
+    data.seasons = [];
   }
 
-  if (!isSeries) {
-    data.stream = document.getElementById("stream")?.value.trim() || "";
-    data.seasons = [];
-  } else {
-    // برای سریال، seasons و stream را بیرون از این تابع ست می‌کنیم
-    data.stream = "";
+  if (editMode) {
+    data.id = editMode;
   }
 
   return data;
 }
 
-// =============================
-// ذخیره در Supabase (insert / update)
-// =============================
-async function saveMovieToSupabase(data) {
+// --- Save to Supabase ---
+
+async function saveContent(data) {
+  const payload = {
+    title: data.title,
+    year: data.year,
+    type: data.type,
+    category: data.category,
+    cover_url: data.cover_url,
+    description: data.description,
+    download_url: data.download_url,
+    subtitle_url: data.subtitle_url,
+    stream_url: data.stream_url,
+    seasons: data.seasons || []
+  };
+
   if (editMode) {
     const { error } = await supabase
       .from("contents")
-      .update({
-        title: data.title,
-        year: data.year,
-        type: data.type,
-        category: data.category,
-        cover: data.cover,
-        description: data.description,
-        download: data.download,
-        subtitle: data.subtitle,
-        stream: data.stream,
-        seasons: data.seasons,
-      })
+      .update(payload)
       .eq("id", editMode);
 
     if (error) {
-      console.error("خطا در آپدیت محتوا:", error);
-      alert("خطا در ذخیره تغییرات: " + error.message);
+      alert("خطا در ویرایش: " + error.message);
       return false;
     }
-    return true;
   } else {
-    const { error } = await supabase.from("contents").insert([
-      {
-        title: data.title,
-        year: data.year,
-        type: data.type,
-        category: data.category,
-        cover: data.cover,
-        description: data.description,
-        download: data.download,
-        subtitle: data.subtitle,
-        stream: data.stream,
-        seasons: data.seasons,
-      },
-    ]);
+    const { error } = await supabase.from("contents").insert([payload]);
 
     if (error) {
-      console.error("خطا در افزودن محتوا:", error);
-      alert("خطا در افزودن محتوا: " + error.message);
+      alert("خطا در افزودن: " + error.message);
       return false;
     }
-    return true;
   }
+
+  return true;
 }
 
-// =============================
-// رندر لیست ادمین
-// =============================
-async function renderAdminList() {
-  const movies = await getMovies();
+// --- Render List ---
+
+async function renderList() {
+  const contents = await getContents();
 
   if (!adminList) return;
 
-  if (!movies.length) {
+  if (!contents.length) {
     adminList.innerHTML = "<p class='no-results'>هیچ محتوایی یافت نشد.</p>";
     return;
   }
 
-  adminList.innerHTML = movies
-    .map((movie) => {
-      // جلوگیری از ساخت کارت ناقص یا subtitle-only
-      if (!movie || !movie.title) return "";
-      if (movie.type === "subtitle") return "";
+  adminList.innerHTML = contents.map(item => `
+    <div class="admin-card">
+      <img src="${item.cover_url || 'assets/default-cover.jpg'}" alt="${item.title}">
+      <div class="admin-card-info">
+        <h3>${item.title}</h3>
+        <span class="admin-meta">${item.category || '-'} | ${item.year || '-'}</span>
+        <div class="admin-type">${item.type === 'series' ? 'سریال' : 'فیلم'}</div>
+      </div>
+      <div class="admin-card-actions">
+        <button class="admin-btn edit-btn" data-id="${item.id}">ویرایش</button>
+        <button class="admin-btn delete-btn" data-id="${item.id}">حذف</button>
+      </div>
+    </div>
+  `).join("");
 
-      return `
-        <div class="admin-card">
-          <img
-            src="${movie.cover || ""}"
-            alt="${movie.title || ""}"
-          >
-
-          <div class="admin-card-info">
-            <h3>${movie.title || "-"}</h3>
-
-            <span class="admin-meta">
-              ${movie.category || "-"} | ${movie.year || "-"}
-            </span>
-
-            <div class="admin-type">
-              ${movie.type === "series" ? "سریال" : "فیلم"}
-            </div>
-          </div>
-
-          <div class="admin-card-actions">
-            <button
-              class="admin-btn edit-btn"
-              onclick="editMovie('${movie.id}')"
-            >
-              ویرایش
-            </button>
-
-            <button
-              class="admin-btn delete-btn"
-              onclick="deleteMovie('${movie.id}')"
-            >
-              حذف
-            </button>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
+  // Event delegation for buttons
+  adminList.addEventListener("click", handleListActions);
 }
 
-// =============================
-// ویرایش
-// =============================
-window.editMovie = async function (id) {
-  const movies = await getMovies();
-  const movie = movies.find((m) => String(m.id) === String(id));
+function handleListActions(e) {
+  const btn = e.target.closest(".admin-btn");
+  if (!btn) return;
 
-  if (!movie) return;
-
-  editMode = movie.id;
-
-  document.getElementById("title").value = movie.title || "";
-  document.getElementById("year").value = movie.year || "";
-  document.getElementById("type").value = movie.type || "movie";
-  document.getElementById("category").value = movie.category || "";
-  document.getElementById("cover").value = movie.cover || "";
-  document.getElementById("download").value = movie.download || "";
-  document.getElementById("description").value = movie.description || "";
-
-  const subtitleInput = document.getElementById("subtitle");
-  if (subtitleInput) {
-    subtitleInput.value = movie.subtitle || "";
+  const id = btn.dataset.id;
+  if (btn.classList.contains("edit-btn")) {
+    editContent(id);
+  } else if (btn.classList.contains("delete-btn")) {
+    deleteContent(id);
   }
+}
 
-  if (subtitleFileInput) {
-    subtitleFileInput.value = "";
-  }
+// --- Edit ---
 
-  setSeriesMode(movie.type === "series");
+async function editContent(id) {
+  const contents = await getContents();
+  const item = contents.find(c => String(c.id) === String(id));
+  if (!item) return;
 
+  editMode = item.id;
+
+  document.getElementById("title").value = item.title || "";
+  document.getElementById("year").value = item.year || "";
+  document.getElementById("type").value = item.type || "movie";
+  document.getElementById("category").value = item.category || "";
+  document.getElementById("cover").value = item.cover_url || "";
+  document.getElementById("download").value = item.download_url || "";
+  document.getElementById("description").value = item.description || "";
+  document.getElementById("subtitle").value = item.subtitle_url || "";
+
+  if (subtitleFileInput) subtitleFileInput.value = "";
+
+  setSeriesMode(item.type === "series");
   seasonsContainer.innerHTML = "";
 
-  if (movie.type === "series") {
-    (movie.seasons || []).forEach((season) => {
-      seasonsContainer.appendChild(createSeasonItem(season));
-    });
+  if (item.type === "series" && Array.isArray(item.seasons)) {
+    item.seasons.forEach(s => seasonsContainer.appendChild(createSeasonItem(s)));
   } else {
-    document.getElementById("stream").value = movie.stream || "";
+    document.getElementById("stream").value = item.stream_url || "";
   }
 
   submitBtn.textContent = "ذخیره تغییرات";
   formTitle.textContent = "ویرایش محتوا";
+  form.scrollIntoView({ behavior: "smooth" });
+}
 
-  form.scrollIntoView({
-    behavior: "smooth",
-  });
-};
+// --- Delete ---
 
-// =============================
-// حذف
-// =============================
-window.deleteMovie = async function (id) {
-  const confirmDelete = confirm("آیا از حذف این محتوا مطمئن هستید؟");
-  if (!confirmDelete) return;
+async function deleteContent(id) {
+  if (!confirm("آیا از حذف مطمئن هستید؟")) return;
 
   const { error } = await supabase.from("contents").delete().eq("id", id);
-
   if (error) {
-    console.error("خطا در حذف محتوا:", error);
-    alert("خطا در حذف محتوا: " + error.message);
+    alert("خطا در حذف: " + error.message);
     return;
   }
 
-  renderAdminList();
-};
-
-// =============================
-// ریست فرم
-// =============================
-function resetFormState() {
-  form.reset();
-  editMode = null;
-
-  submitBtn.textContent = "ثبت و افزودن";
-  formTitle.textContent = "افزودن محتوای جدید";
-
-  seasonsContainer.innerHTML = "";
-  setSeriesMode(false);
-
-  if (subtitleFileInput) {
-    subtitleFileInput.value = "";
-  }
+  renderList();
 }
 
-// =============================
-// تغییر نوع
-// =============================
+// --- Reset ---
+
+function resetForm() {
+  form?.reset();
+  editMode = null;
+  submitBtn.textContent = "ثبت و افزودن";
+  formTitle.textContent = "افزودن محتوای جدید";
+  seasonsContainer.innerHTML = "";
+  setSeriesMode(false);
+  if (subtitleFileInput) subtitleFileInput.value = "";
+}
+
+// --- Event Listeners ---
+
 if (typeSelect) {
   typeSelect.addEventListener("change", () => {
     const isSeries = typeSelect.value === "series";
     setSeriesMode(isSeries);
-
-    if (isSeries && seasonsContainer.children.length === 0) {
+    if (isSeries && !seasonsContainer.children.length) {
       seasonsContainer.appendChild(createSeasonItem());
     }
   });
 }
 
-// =============================
-// افزودن فصل
-// =============================
 if (addSeasonBtn) {
   addSeasonBtn.addEventListener("click", () => {
     seasonsContainer.appendChild(createSeasonItem());
   });
 }
 
-// =============================
-// ثبت فرم (با Supabase)
-// =============================
 if (form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // ۱. اعتبارسنجی اولیه
-    const type = typeSelect ? typeSelect.value : "movie";
+    const type = typeSelect?.value || "movie";
 
-    const titleVal = document.getElementById("title")?.value.trim();
-    if (!titleVal) {
-      alert("عنوان را وارد کنید.");
+    if (!document.getElementById("title")?.value.trim()) {
+      alert("عنوان را وارد کنید");
       return;
     }
 
-    if (type === "movie") {
-      const streamVal = document.getElementById("stream")?.value.trim();
-      if (!streamVal) {
-        alert("لینک استریم فیلم را وارد کنید.");
-        return;
-      }
+    if (type === "movie" && !document.getElementById("stream")?.value.trim()) {
+      alert("لینک استریم را وارد کنید");
+      return;
     }
 
     let seasonsData = [];
     if (type === "series") {
       seasonsData = await collectSeasonsData();
-      if (!seasonsData || seasonsData.length === 0) {
-        alert("حداقل یک فصل اضافه کنید.");
+      if (!seasonsData.length) {
+        alert("حداقل یک فصل اضافه کنید");
         return;
       }
     }
 
-    // ۲. گرفتن URL نهایی زیرنویس فیلم (لینک دستی + آپلود فایل)
     const subtitleUrl = await getMovieSubtitleUrl();
-
-    // ۳. جمع‌آوری داده‌ها با در نظر گرفتن subtitleUrl
     const data = collectFormData(subtitleUrl);
 
     if (type === "series") {
       data.seasons = seasonsData;
-      data.stream = ""; // برای سریال، استریم کلی خالی می‌ماند
+      data.stream_url = "";
     }
 
-    // ۴. ذخیره در Supabase
-    const ok = await saveMovieToSupabase(data);
+    const ok = await saveContent(data);
     if (!ok) return;
 
-    resetFormState();
-    renderAdminList();
+    resetForm();
+    renderList();
   });
 }
 
-// =============================
-// اجرای اولیه
-// =============================
-if (typeSelect) {
-  setSeriesMode(typeSelect.value === "series");
-}
-
-renderAdminList();
+// --- Init ---
+if (typeSelect) setSeriesMode(typeSelect.value === "series");
+renderList();
